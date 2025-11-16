@@ -1,0 +1,119 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Expo: Start",
+      "type": "shell",
+      "command": "npm",
+      "args": ["start"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Start (Clear Cache)",
+      "type": "shell",
+      "command": "npx",
+      "args": ["expo", "start", "-c"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Android",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "android"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: iOS",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "ios"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Web",
+      "type": "shell",
+      "command": "npm",
+      "args": ["run", "web"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "npm: Install Dependencies",
+      "type": "shell",
+      "command": "npm",
+      "args": ["install"],
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "npm: Update Dependencies",
+      "type": "shell",
+      "command": "npm",
+      "args": ["update"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Build Android APK",
+      "type": "shell",
+      "command": "npx",
+      "args": ["eas", "build", "--platform", "android"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Build iOS",
+      "type": "shell",
+      "command": "npx",
+      "args": ["eas", "build", "--platform", "ios"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Expo: Doctor",
+      "type": "shell",
+      "command": "npx",
+      "args": ["expo-doctor"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ]
+}

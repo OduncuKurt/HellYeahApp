@@ -1,0 +1,66 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Expo: Start",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli.js",
+      "args": ["start"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Expo: Start (Clear Cache)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli.js",
+      "args": ["start", "-c"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Expo: Android",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli.js",
+      "args": ["start", "--android"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Expo: iOS",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli.js",
+      "args": ["start", "--ios"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Expo: Web",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/expo/bin/cli.js",
+      "args": ["start", "--web"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    },
+    {
+      "name": "Debug in Exponent",
+      "type": "reactnative",
+      "request": "launch",
+      "platform": "exponent"
+    },
+    {
+      "name": "Attach to packager",
+      "type": "reactnative",
+      "request": "attach"
+    }
+  ]
+}

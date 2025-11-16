@@ -1,0 +1,50 @@
+{
+  "expo": {
+    "name": "Hell Yeah App",
+    "slug": "hell-yeah-app-rn",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.hellyeahapp.rn",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Bu uygulama fotoğraf çekmek için kameraya erişim gerektirir.",
+        "NSPhotoLibraryUsageDescription": "Bu uygulama fotoğraf seçmek için galeriye erişim gerektirir."
+      }
+    },
+    "android": {
+      "package": "com.hellyeahapp.rn",
+      "permissions": [
+        "CAMERA",
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Fotoğraf çekmek için kamera izni gereklidir."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Galeriden fotoğraf seçmek için izin gereklidir."
+        }
+      ],
+      "expo-asset"
+    ]
+  }
+}

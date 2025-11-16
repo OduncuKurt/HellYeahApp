@@ -1,0 +1,63 @@
+{
+  // React Native & Expo ayarları
+  "javascript.validate.enable": true,
+  "typescript.validate.enable": true,
+
+  // Otomatik kaydetme ve format
+  "editor.formatOnSave": true,
+  "editor.formatOnType": false,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  },
+
+  // JavaScript/TypeScript ayarları
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "typescript.updateImportsOnFileMove.enabled": "always",
+
+  // Dosya izleme
+  "files.watcherExclude": {
+    "**/.git/objects/**": true,
+    "**/.git/subtree-cache/**": true,
+    "**/node_modules/**": true,
+    "**/.expo/**": true,
+    "**/dist/**": true,
+    "**/.vscode/.react/**": true
+  },
+
+  // Dosya hariç tutma
+  "files.exclude": {
+    "**/.git": true,
+    "**/.DS_Store": true,
+    "**/.expo": false,
+    "**/node_modules": false
+  },
+
+  // Search hariç tutma
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/.expo": true,
+    "**/dist": true,
+    "**/build": true
+  },
+
+  // Emmet ayarları
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact"
+  },
+
+  // ESLint
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+
+  // React Native Tools
+  "react-native-tools.showUserTips": false,
+  "react-native-tools.projectRoot": "${workspaceFolder}",
+
+  // Terminal
+  "terminal.integrated.defaultProfile.windows": "Command Prompt"
+}
