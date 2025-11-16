@@ -12,6 +12,7 @@
     "assetBundlePatterns": [
       "**/*"
     ],
+    "scheme": "hellyeahapp",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hellyeahapp.rn",
