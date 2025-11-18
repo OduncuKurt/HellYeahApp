@@ -3,13 +3,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
+  signInAnonymously,
   signOut,
   onAuthStateChanged,
   updateProfile,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
-import { auth, database } from '../../firebaseConfig';
+import { auth, database } from '../config/firebase';
 import { User, AuthContextType, AuthResult } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -144,6 +145,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Anonim giriş yap
+  const loginAnonymously = async (): Promise<AuthResult> => {
+    try {
+      setLoading(true);
+      const userCredential = await signInAnonymously(auth);
+      const { uid } = userCredential.user;
+
+      // Anonim kullanıcı için database'e kaydet
+      const userRef = ref(database, `users/${uid}`);
+      const userData = {
+        displayName: 'Misafir',
+        avatar: '👤',
+        totalBeers: 0,
+        createdAt: new Date().toISOString(),
+        groups: {},
+      };
+      await set(userRef, userData);
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('Anonymous login error:', error);
+      return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Kullanıcı verilerini yenile
   const refreshUserData = async (): Promise<void> => {
     if (user?.uid) {
@@ -161,6 +189,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     initializing,
     register,
     login,
+    loginAnonymously,
     logout,
     refreshUserData,
   };

@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
@@ -97,178 +99,245 @@ export default function JoinGroupScreen({ navigation, route }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <StatusBar style="light" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
+      <LinearGradient
+        colors={['#0F0F0F', '#1A1A1A', '#0F0F0F']}
+        style={styles.gradient}
+      >
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <Text style={styles.backButtonText}>← Geri</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Gruba Katıl</Text>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.emoji}>🔗</Text>
-        <Text style={styles.title}>Davet Kodu Gir</Text>
-        <Text style={styles.subtitle}>Arkadaşından aldığın kodu gir</Text>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Davet Kodu</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="BEER-XXXX"
-              placeholderTextColor="#666"
-              value={inviteCode}
-              onChangeText={formatInviteCode}
-              maxLength={9}
-              autoCapitalize="characters"
-              editable={!loading}
-              autoFocus={!route.params?.inviteCode}
-            />
-            <Text style={styles.hint}>Format: BEER-XXXX (örn: BEER-2A5X)</Text>
-          </View>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>ℹ️ Nasıl Çalışır?</Text>
-            <Text style={styles.infoText}>1. Arkadaşından davet kodunu al</Text>
-            <Text style={styles.infoText}>2. Kodu yukarıya gir</Text>
-            <Text style={styles.infoText}>3. Gruba katıl ve birlikte sayın!</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.joinButton, loading && styles.buttonDisabled]}
-            onPress={handleJoinGroup}
-            disabled={loading}
-            activeOpacity={0.8}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.joinButtonText}>Gruba Katıl</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={loading}
+            >
+              <Text style={styles.backButtonText}>← Geri</Text>
+            </TouchableOpacity>
+
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#34C759', '#30B350']}
+                  style={styles.logoGradient}
+                >
+                  <Text style={styles.logoEmoji}>🔗</Text>
+                </LinearGradient>
+              </View>
+              <Text style={styles.title}>Gruba Katıl</Text>
+              <Text style={styles.subtitle}>Arkadaşından aldığın kodu gir</Text>
+            </View>
+
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              {/* Code Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Davet Kodu</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="BEER-XXXX"
+                    placeholderTextColor="#666"
+                    value={inviteCode}
+                    onChangeText={formatInviteCode}
+                    maxLength={9}
+                    autoCapitalize="characters"
+                    editable={!loading}
+                    autoFocus={!route.params?.inviteCode}
+                  />
+                </View>
+                <Text style={styles.hint}>Format: BEER-XXXX (örn: BEER-2A5X)</Text>
+              </View>
+
+              {/* Info Box */}
+              <View style={styles.infoBox}>
+                <Text style={styles.infoTitle}>ℹ️ Nasıl Çalışır?</Text>
+                <Text style={styles.infoText}>1. Arkadaşından davet kodunu al</Text>
+                <Text style={styles.infoText}>2. Kodu yukarıya gir</Text>
+                <Text style={styles.infoText}>3. Gruba katıl ve birlikte sayın!</Text>
+              </View>
+
+              {/* Join Button */}
+              <TouchableOpacity
+                onPress={handleJoinGroup}
+                disabled={loading}
+                activeOpacity={0.9}
+                style={styles.buttonWrapper}
+              >
+                <LinearGradient
+                  colors={['#34C759', '#30B350']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.joinButton, loading && styles.buttonDisabled]}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={styles.joinButtonText}>Gruba Katıl</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0F0F0F',
   },
-  header: {
-    paddingTop: 60,
+  gradient: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   backButton: {
-    marginBottom: 20,
+    marginBottom: 24,
+    alignSelf: 'flex-start',
   },
   backButtonText: {
-    color: '#FF9500',
     fontSize: 16,
     fontWeight: '600',
+    color: '#FF9500',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
+  header: {
     alignItems: 'center',
+    marginBottom: 40,
   },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
+  logoContainer: {
+    marginBottom: 20,
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#34C759',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  logoEmoji: {
+    fontSize: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
     color: '#999',
-    marginBottom: 40,
+    fontWeight: '500',
   },
-  form: {
-    width: '100%',
+  formCard: {
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 8,
   },
-  inputContainer: {
-    marginBottom: 24,
+  inputWrapper: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    color: '#FFF',
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 24,
-    color: '#fff',
-    borderWidth: 2,
-    borderColor: '#3a3a3a',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 22,
+    color: '#FFF',
+    fontWeight: '700',
     textAlign: 'center',
-    fontWeight: 'bold',
     letterSpacing: 2,
   },
   hint: {
     fontSize: 12,
     color: '#666',
-    marginTop: 4,
+    marginTop: 6,
     textAlign: 'center',
   },
   infoBox: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
+    backgroundColor: 'rgba(52, 199, 89, 0.1)',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 32,
+    marginBottom: 28,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: 'rgba(52, 199, 89, 0.2)',
   },
   infoTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
-    color: '#FF9500',
-    marginBottom: 8,
+    fontWeight: '700',
+    color: '#34C759',
+    marginBottom: 12,
+    letterSpacing: 0.3,
   },
   infoText: {
     fontSize: 13,
-    color: '#999',
-    marginBottom: 4,
-    lineHeight: 18,
+    color: '#CCC',
+    marginBottom: 6,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  buttonWrapper: {
+    marginTop: 8,
   },
   joinButton: {
-    backgroundColor: '#34C759',
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#34C759',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   joinButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.6,

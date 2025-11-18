@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +31,6 @@ export default function RegisterScreen({ navigation }: Props) {
   const { register, loading } = useAuth();
 
   const handleRegister = async (): Promise<void> => {
-    // Validasyon
     if (!displayName || !email || !password || !confirmPassword) {
       Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
       return;
@@ -60,192 +60,274 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <LinearGradient
+        colors={['#0F0F0F', '#1A1A1A', '#0F0F0F']}
+        style={styles.gradient}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-            disabled={loading}
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          style={styles.keyboardView}
+        >
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.backButtonText}>← Geri</Text>
-          </TouchableOpacity>
-          <Text style={styles.logo}>🍺</Text>
-          <Text style={styles.title}>Hesap Oluştur</Text>
-          <Text style={styles.subtitle}>Arkadaşlarınla bira say!</Text>
-        </View>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={loading}
+            >
+              <Text style={styles.backButtonText}>← Geri</Text>
+            </TouchableOpacity>
 
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>İsim</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Adın Soyadın"
-              placeholderTextColor="#999"
-              value={displayName}
-              onChangeText={setDisplayName}
-              autoCapitalize="words"
-              editable={!loading}
-            />
-          </View>
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FF9500', '#FFB84D']}
+                  style={styles.logoGradient}
+                >
+                  <Text style={styles.logoEmoji}>🍺</Text>
+                </LinearGradient>
+              </View>
+              <Text style={styles.title}>Hesap Oluştur</Text>
+              <Text style={styles.subtitle}>Hemen aramıza katıl!</Text>
+            </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="ornek@email.com"
-              placeholderTextColor="#999"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              autoComplete="email"
-              editable={!loading}
-            />
-          </View>
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              {/* Name Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Ad Soyad</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Adın Soyadın"
+                    placeholderTextColor="#666"
+                    value={displayName}
+                    onChangeText={setDisplayName}
+                    autoCapitalize="words"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Şifre</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#999"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoComplete="password"
-              editable={!loading}
-            />
-            <Text style={styles.hint}>En az 6 karakter</Text>
-          </View>
+              {/* Email Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>E-posta</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="ornek@email.com"
+                    placeholderTextColor="#666"
+                    value={email}
+                    onChangeText={setEmail}
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    editable={!loading}
+                  />
+                </View>
+              </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Şifre Tekrar</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor="#999"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              secureTextEntry
-              editable={!loading}
-            />
-          </View>
+              {/* Password Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Şifre</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor="#666"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoComplete="password"
+                    editable={!loading}
+                  />
+                </View>
+                <Text style={styles.hint}>En az 6 karakter</Text>
+              </View>
 
-          <TouchableOpacity
-            style={[styles.registerButton, loading && styles.buttonDisabled]}
-            onPress={handleRegister}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.registerButtonText}>Kayıt Ol</Text>
-            )}
-          </TouchableOpacity>
+              {/* Confirm Password Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Şifre Tekrar</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="••••••••"
+                    placeholderTextColor="#666"
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    secureTextEntry
+                    editable={!loading}
+                  />
+                </View>
+              </View>
 
-          <TouchableOpacity
-            style={styles.loginLink}
-            onPress={() => navigation.goBack()}
-            disabled={loading}
-          >
-            <Text style={styles.loginLinkText}>
-              Zaten hesabın var mı? <Text style={styles.loginLinkBold}>Giriş Yap</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              {/* Register Button */}
+              <TouchableOpacity
+                onPress={handleRegister}
+                disabled={loading}
+                activeOpacity={0.9}
+                style={styles.buttonWrapper}
+              >
+                <LinearGradient
+                  colors={['#FF9500', '#FF7A00']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.registerButton, loading && styles.buttonDisabled]}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={styles.registerButtonText}>Kayıt Ol</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+
+              {/* Login Link */}
+              <TouchableOpacity
+                style={styles.loginLink}
+                onPress={() => navigation.goBack()}
+                disabled={loading}
+              >
+                <Text style={styles.loginLinkText}>
+                  Zaten hesabın var mı?{' '}
+                  <Text style={styles.loginLinkBold}>Giriş Yap</Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0F0F0F',
+  },
+  gradient: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
-    padding: 24,
+    paddingHorizontal: 24,
     paddingTop: 60,
+    paddingBottom: 40,
+  },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF9500',
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  backButton: {
-    alignSelf: 'flex-start',
-    marginBottom: 24,
+  logoContainer: {
+    marginBottom: 20,
   },
-  backButtonText: {
-    color: '#FF9500',
-    fontSize: 16,
-    fontWeight: '600',
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
-  logo: {
-    fontSize: 64,
-    marginBottom: 16,
+  logoEmoji: {
+    fontSize: 40,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
     color: '#999',
+    fontWeight: '500',
   },
-  form: {
-    width: '100%',
+  formCard: {
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 8,
   },
-  inputContainer: {
+  inputWrapper: {
     marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    color: '#FFF',
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     fontSize: 16,
-    color: '#fff',
-    borderWidth: 1,
-    borderColor: '#3a3a3a',
+    color: '#FFF',
+    fontWeight: '500',
   },
   hint: {
     fontSize: 12,
     color: '#666',
-    marginTop: 4,
+    marginTop: 6,
+    marginLeft: 4,
+  },
+  buttonWrapper: {
+    marginTop: 8,
   },
   registerButton: {
-    backgroundColor: '#FF9500',
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
-    marginTop: 8,
+    justifyContent: 'center',
     shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   registerButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -257,9 +339,10 @@ const styles = StyleSheet.create({
   loginLinkText: {
     color: '#999',
     fontSize: 14,
+    fontWeight: '500',
   },
   loginLinkBold: {
     color: '#FF9500',
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
 });

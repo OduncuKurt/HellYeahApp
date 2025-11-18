@@ -1,6 +1,8 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Firebase yapılandırması
 const firebaseConfig = {
@@ -15,6 +17,11 @@ const firebaseConfig = {
 
 // Firebase'i başlat
 const app = initializeApp(firebaseConfig);
+
+// Auth'u React Native AsyncStorage persistence ile başlat
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
 
 // Database ve Storage referanslarını export et
 export const database = getDatabase(app);

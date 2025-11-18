@@ -9,7 +9,9 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../contexts/AuthContext';
@@ -71,174 +73,242 @@ export default function CreateGroupScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <View style={styles.container}>
       <StatusBar style="light" />
-
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          disabled={loading}
+      <LinearGradient
+        colors={['#0F0F0F', '#1A1A1A', '#0F0F0F']}
+        style={styles.gradient}
+      >
+        <KeyboardAvoidingView
+          style={styles.keyboardView}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-          <Text style={styles.backButtonText}>← Geri</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Yeni Grup</Text>
-      </View>
-
-      <View style={styles.content}>
-        <Text style={styles.emoji}>🍺</Text>
-        <Text style={styles.title}>Grup Oluştur</Text>
-        <Text style={styles.subtitle}>Arkadaşlarınla bira sayın!</Text>
-
-        <View style={styles.form}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.label}>Grup Adı</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Örn: Takım Arkadaşları"
-              placeholderTextColor="#666"
-              value={groupName}
-              onChangeText={setGroupName}
-              maxLength={30}
-              editable={!loading}
-              autoFocus
-            />
-            <Text style={styles.hint}>{groupName.length}/30 karakter</Text>
-          </View>
-
-          <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>ℹ️ Bilgi</Text>
-            <Text style={styles.infoText}>• Maksimum 3 gruba üye olabilirsiniz</Text>
-            <Text style={styles.infoText}>• Grup oluşturulunca size özel bir davet kodu verilecek</Text>
-            <Text style={styles.infoText}>• Bu kodu arkadaşlarınla paylaş!</Text>
-          </View>
-
-          <TouchableOpacity
-            style={[styles.createButton, loading && styles.buttonDisabled]}
-            onPress={handleCreateGroup}
-            disabled={loading}
-            activeOpacity={0.8}
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
           >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.createButtonText}>Grup Oluştur</Text>
-            )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={loading}
+            >
+              <Text style={styles.backButtonText}>← Geri</Text>
+            </TouchableOpacity>
+
+            {/* Header */}
+            <View style={styles.header}>
+              <View style={styles.logoContainer}>
+                <LinearGradient
+                  colors={['#FF9500', '#FFB84D']}
+                  style={styles.logoGradient}
+                >
+                  <Text style={styles.logoEmoji}>🍺</Text>
+                </LinearGradient>
+              </View>
+              <Text style={styles.title}>Grup Oluştur</Text>
+              <Text style={styles.subtitle}>Arkadaşlarınla bira sayın!</Text>
+            </View>
+
+            {/* Form Card */}
+            <View style={styles.formCard}>
+              {/* Name Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Grup Adı</Text>
+                <View style={styles.inputContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Örn: Takım Arkadaşları"
+                    placeholderTextColor="#666"
+                    value={groupName}
+                    onChangeText={setGroupName}
+                    maxLength={30}
+                    editable={!loading}
+                    autoFocus
+                  />
+                </View>
+                <Text style={styles.hint}>{groupName.length}/30 karakter</Text>
+              </View>
+
+              {/* Info Box */}
+              <View style={styles.infoBox}>
+                <Text style={styles.infoTitle}>ℹ️ Bilgi</Text>
+                <Text style={styles.infoText}>• Maksimum 3 gruba üye olabilirsiniz</Text>
+                <Text style={styles.infoText}>• Grup oluşturulunca size özel bir davet kodu verilecek</Text>
+                <Text style={styles.infoText}>• Bu kodu arkadaşlarınla paylaş!</Text>
+              </View>
+
+              {/* Create Button */}
+              <TouchableOpacity
+                onPress={handleCreateGroup}
+                disabled={loading}
+                activeOpacity={0.9}
+                style={styles.buttonWrapper}
+              >
+                <LinearGradient
+                  colors={['#FF9500', '#FF7A00']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                  style={[styles.createButton, loading && styles.buttonDisabled]}
+                >
+                  {loading ? (
+                    <ActivityIndicator color="#FFF" size="small" />
+                  ) : (
+                    <Text style={styles.createButtonText}>Grup Oluştur</Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </LinearGradient>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
+    backgroundColor: '#0F0F0F',
   },
-  header: {
-    paddingTop: 60,
+  gradient: {
+    flex: 1,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 20,
+    paddingTop: 60,
+    paddingBottom: 40,
   },
   backButton: {
-    marginBottom: 20,
+    marginBottom: 24,
+    alignSelf: 'flex-start',
   },
   backButtonText: {
-    color: '#FF9500',
     fontSize: 16,
     fontWeight: '600',
+    color: '#FF9500',
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  content: {
-    flex: 1,
-    padding: 24,
+  header: {
     alignItems: 'center',
+    marginBottom: 40,
   },
-  emoji: {
-    fontSize: 64,
-    marginBottom: 16,
+  logoContainer: {
+    marginBottom: 20,
+  },
+  logoGradient: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF9500',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
+  },
+  logoEmoji: {
+    fontSize: 40,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#fff',
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#FFFFFF',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   subtitle: {
     fontSize: 16,
     color: '#999',
-    marginBottom: 40,
+    fontWeight: '500',
   },
-  form: {
-    width: '100%',
+  formCard: {
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+    borderRadius: 24,
+    padding: 24,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 8,
   },
-  inputContainer: {
-    marginBottom: 24,
+  inputWrapper: {
+    marginBottom: 20,
   },
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
-    marginBottom: 8,
+    color: '#FFF',
+    marginBottom: 10,
+    marginLeft: 4,
+  },
+  inputContainer: {
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   input: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 18,
-    color: '#fff',
-    borderWidth: 2,
-    borderColor: '#3a3a3a',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    fontSize: 16,
+    color: '#FFF',
+    fontWeight: '500',
   },
   hint: {
     fontSize: 12,
     color: '#666',
-    marginTop: 4,
-    textAlign: 'right',
+    marginTop: 6,
+    marginLeft: 4,
   },
   infoBox: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 12,
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    borderRadius: 16,
     padding: 16,
-    marginBottom: 32,
+    marginBottom: 28,
     borderWidth: 1,
-    borderColor: '#3a3a3a',
+    borderColor: 'rgba(255, 149, 0, 0.2)',
   },
   infoTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#FF9500',
-    marginBottom: 8,
+    marginBottom: 12,
+    letterSpacing: 0.3,
   },
   infoText: {
     fontSize: 13,
-    color: '#999',
-    marginBottom: 4,
-    lineHeight: 18,
+    color: '#CCC',
+    marginBottom: 6,
+    lineHeight: 20,
+    fontWeight: '500',
+  },
+  buttonWrapper: {
+    marginTop: 8,
   },
   createButton: {
-    backgroundColor: '#FF9500',
-    borderRadius: 12,
-    padding: 16,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
   },
   createButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
+    color: '#FFF',
+    fontSize: 17,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   buttonDisabled: {
     opacity: 0.6,
