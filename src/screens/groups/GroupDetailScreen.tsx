@@ -1,24 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-  Share,
-  Image,
-} from 'react-native';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import * as ImagePicker from 'expo-image-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
-import * as ImagePicker from 'expo-image-picker';
+import React, { useEffect, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  Image,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
-import { getGroupDetails, leaveGroup } from '../../services/groupService';
 import { addBeer, getGroupBeers } from '../../services/beerService';
-import { Group, Beer, MainStackParamList } from '../../types';
+import { getGroupDetails, leaveGroup } from '../../services/groupService';
+import { Beer, Group, MainStackParamList } from '../../types';
 
 type GroupDetailScreenNavigationProp = StackNavigationProp<MainStackParamList, 'GroupDetail'>;
 type GroupDetailScreenRouteProp = RouteProp<MainStackParamList, 'GroupDetail'>;
@@ -74,33 +74,11 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
       return;
     }
 
-    // Kamera veya galeri seçeneği sun
-    Alert.alert(
-      'Bira Ekle',
-      'Fotoğrafını nasıl eklemek istersin?',
-      [
-        {
-          text: 'İptal',
-          style: 'cancel',
-        },
-        {
-          text: 'Kamera',
-          onPress: () => takePicture(),
-        },
-        {
-          text: 'Galeri',
-          onPress: () => pickImage(),
-        },
-      ]
-    );
-  };
-
-  const takePicture = async (): Promise<void> => {
+    // Direkt kamerayı aç
     try {
       const result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        mediaTypes: ['images'],
+        allowsEditing: false,
         quality: 0.7,
       });
 
@@ -110,24 +88,6 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
     } catch (error) {
       console.error('Take picture error:', error);
       Alert.alert('Hata', 'Fotoğraf çekilemedi.');
-    }
-  };
-
-  const pickImage = async (): Promise<void> => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.7,
-      });
-
-      if (!result.canceled && result.assets[0]) {
-        await uploadBeerPhoto(result.assets[0].uri);
-      }
-    } catch (error) {
-      console.error('Pick image error:', error);
-      Alert.alert('Hata', 'Fotoğraf seçilemedi.');
     }
   };
 

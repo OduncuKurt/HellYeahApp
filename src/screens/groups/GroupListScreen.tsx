@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
@@ -27,6 +28,7 @@ export default function GroupListScreen({ navigation }: Props) {
   const [groups, setGroups] = useState<Group[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null);
 
   const loadGroups = async (): Promise<void> => {
     if (!user) return;
@@ -56,6 +58,14 @@ export default function GroupListScreen({ navigation }: Props) {
 
   const handleLogout = async (): Promise<void> => {
     await logout();
+  };
+
+  const copyInviteCode = async (groupId: string, code: string): Promise<void> => {
+    await Clipboard.setStringAsync(code);
+    setCopiedGroupId(groupId);
+    setTimeout(() => {
+      setCopiedGroupId(null);
+    }, 1500);
   };
 
   const renderGroupItem = ({ item }: { item: Group }) => {
@@ -90,10 +100,26 @@ export default function GroupListScreen({ navigation }: Props) {
             </View>
             <Text style={styles.arrow}>›</Text>
           </View>
-          <View style={styles.inviteCodeBox}>
-            <Text style={styles.inviteCodeLabel}>Davet Kodu:</Text>
-            <Text style={styles.inviteCode}>{item.inviteCode}</Text>
-          </View>
+          <TouchableOpacity
+            style={[
+              styles.inviteCodeBox,
+              copiedGroupId === item.id && styles.inviteCodeBoxCopied
+            ]}
+            onLongPress={() => copyInviteCode(item.id, item.inviteCode)}
+            activeOpacity={0.7}
+          >
+            {copiedGroupId === item.id ? (
+              <>
+                <Text style={styles.copiedText}>Kopyalandı</Text>
+                <Text style={styles.copiedIcon}>✓</Text>
+              </>
+            ) : (
+              <>
+                <Text style={styles.inviteCodeLabel}>Davet Kodu:</Text>
+                <Text style={styles.inviteCode}>{item.inviteCode}</Text>
+              </>
+            )}
+          </TouchableOpacity>
         </LinearGradient>
       </TouchableOpacity>
     );
@@ -345,6 +371,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FF9500',
     letterSpacing: 1.5,
+  },
+  inviteCodeBoxCopied: {
+    backgroundColor: 'rgba(52, 199, 89, 0.2)',
+    borderColor: 'rgba(52, 199, 89, 0.3)',
+  },
+  copiedText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#34C759',
+  },
+  copiedIcon: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#34C759',
   },
   emptyState: {
     flex: 1,
