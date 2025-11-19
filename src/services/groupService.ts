@@ -10,15 +10,11 @@ export const createGroup = async (
   groupName: string,
   userId: string,
   userName: string,
-  userAvatar: string
+  userAvatar: string,
+  startDate: string,
+  endDate: string
 ): Promise<{ success: boolean; groupId?: string; inviteCode?: string; error?: string }> => {
   try {
-    // Kullanıcının kaç grubu var kontrol et (max 3)
-    const userGroupCount = await getUserGroupCount(userId);
-    if (userGroupCount >= 3) {
-      return { success: false, error: 'Maksimum 3 gruba üye olabilirsiniz.' };
-    }
-
     // Benzersiz invite code oluştur
     let inviteCode = generateInviteCode();
     let isUnique = false;
@@ -46,11 +42,14 @@ export const createGroup = async (
       createdAt: now,
       totalBeers: 0,
       inviteCode,
+      startDate,
+      endDate,
       members: {
         [userId]: {
           joinedAt: now,
           displayName: userName,
           avatar: userAvatar,
+          beerCount: 0,
         },
       },
     };
@@ -79,12 +78,6 @@ export const joinGroupByInviteCode = async (
   userAvatar: string
 ): Promise<{ success: boolean; groupId?: string; error?: string }> => {
   try {
-    // Kullanıcının kaç grubu var kontrol et (max 3)
-    const userGroupCount = await getUserGroupCount(userId);
-    if (userGroupCount >= 3) {
-      return { success: false, error: 'Maksimum 3 gruba üye olabilirsiniz.' };
-    }
-
     // Invite code ile grubu bul
     const groupsRef = ref(database, 'groups');
     const inviteQuery = query(groupsRef, orderByChild('inviteCode'), equalTo(inviteCode));
@@ -107,6 +100,7 @@ export const joinGroupByInviteCode = async (
       joinedAt: new Date().toISOString(),
       displayName: userName,
       avatar: userAvatar,
+      beerCount: 0,
     };
 
     const memberRef = ref(database, `groups/${groupId}/members/${userId}`);

@@ -18,12 +18,16 @@ export interface Group {
   totalBeers: number;
   inviteCode: string;
   members: { [userId: string]: GroupMember };
+  startDate: string; // Yarışma başlangıç tarihi (ISO string)
+  endDate: string;   // Yarışma bitiş tarihi (ISO string)
+  beers?: { [beerId: string]: Beer }; // Grupta eklenen biralar
 }
 
 export interface GroupMember {
   joinedAt: string;
   displayName: string;
   avatar: string;
+  beerCount: number; // Kullanıcının bu gruptaki bira sayısı
 }
 
 // Beer Types

@@ -8,14 +8,17 @@ import {
   ActivityIndicator,
   Alert,
   Share,
+  Image,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
+import * as ImagePicker from 'expo-image-picker';
 import { useAuth } from '../../contexts/AuthContext';
 import { getGroupDetails, leaveGroup } from '../../services/groupService';
-import { Group, MainStackParamList } from '../../types';
+import { addBeer, getGroupBeers } from '../../services/beerService';
+import { Group, Beer, MainStackParamList } from '../../types';
 
 type GroupDetailScreenNavigationProp = StackNavigationProp<MainStackParamList, 'GroupDetail'>;
 type GroupDetailScreenRouteProp = RouteProp<MainStackParamList, 'GroupDetail'>;
@@ -29,7 +32,9 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
   const { groupId } = route.params;
   const { user } = useAuth();
   const [group, setGroup] = useState<Group | null>(null);
+  const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [uploading, setUploading] = useState<boolean>(false);
 
   useEffect(() => {
     loadGroupDetails();
@@ -37,13 +42,116 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
 
   const loadGroupDetails = async (): Promise<void> => {
     try {
-      const groupData = await getGroupDetails(groupId);
+      const [groupData, beersData] = await Promise.all([
+        getGroupDetails(groupId),
+        getGroupBeers(groupId),
+      ]);
       setGroup(groupData);
+      setBeers(beersData);
     } catch (error) {
       console.error('Load group details error:', error);
       Alert.alert('Hata', 'Grup bilgileri yüklenemedi.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddBeer = async (): Promise<void> => {
+    if (!user || !group) return;
+
+    // Yarışma bitmiş mi kontrol et
+    const now = new Date();
+    const endDate = new Date(group.endDate);
+    if (now > endDate) {
+      Alert.alert('Yarışma Bitti', 'Bu grubun yarışması sona erdi.');
+      return;
+    }
+
+    // İzin iste
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('İzin Gerekli', 'Kamera kullanmak için izin vermelisiniz.');
+      return;
+    }
+
+    // Kamera veya galeri seçeneği sun
+    Alert.alert(
+      'Bira Ekle',
+      'Fotoğrafını nasıl eklemek istersin?',
+      [
+        {
+          text: 'İptal',
+          style: 'cancel',
+        },
+        {
+          text: 'Kamera',
+          onPress: () => takePicture(),
+        },
+        {
+          text: 'Galeri',
+          onPress: () => pickImage(),
+        },
+      ]
+    );
+  };
+
+  const takePicture = async (): Promise<void> => {
+    try {
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadBeerPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Take picture error:', error);
+      Alert.alert('Hata', 'Fotoğraf çekilemedi.');
+    }
+  };
+
+  const pickImage = async (): Promise<void> => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadBeerPhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Pick image error:', error);
+      Alert.alert('Hata', 'Fotoğraf seçilemedi.');
+    }
+  };
+
+  const uploadBeerPhoto = async (photoUri: string): Promise<void> => {
+    if (!user || !group) return;
+
+    setUploading(true);
+
+    const result = await addBeer(
+      groupId,
+      user.uid,
+      user.displayName,
+      user.avatar,
+      photoUri
+    );
+
+    setUploading(false);
+
+    if (result.success) {
+      Alert.alert('Başarılı!', 'Bira eklendi! 🍺');
+      // Grubu yeniden yükle
+      loadGroupDetails();
+    } else {
+      Alert.alert('Hata', result.error || 'Bira eklenemedi.');
     }
   };
 
@@ -124,6 +232,16 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
   const members = Object.entries(group.members || {});
   const isCreator = user?.uid === group.createdBy;
 
+  // Leaderboard - Üyeleri bira sayısına göre sırala
+  const leaderboard = members.sort((a, b) => (b[1].beerCount || 0) - (a[1].beerCount || 0));
+
+  // Yarışma durumu
+  const now = new Date();
+  const startDate = new Date(group.startDate);
+  const endDate = new Date(group.endDate);
+  const isActive = now >= startDate && now <= endDate;
+  const isFinished = now > endDate;
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -134,7 +252,12 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
             <Text style={styles.backIcon}>‹</Text>
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Grup Detayları</Text>
-          <View style={styles.backBtn} />
+          {isActive && !uploading && (
+            <TouchableOpacity onPress={handleAddBeer} style={styles.addBeerBtn}>
+              <Text style={styles.addBeerIcon}>📷</Text>
+            </TouchableOpacity>
+          )}
+          {!isActive && <View style={styles.backBtn} />}
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -170,26 +293,84 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
             <Text style={styles.inviteHint}>Bu kodu arkadaşlarınla paylaş</Text>
           </View>
 
-          {/* Members Card */}
+          {/* Competition Status */}
+          {isFinished && leaderboard.length > 0 && (
+            <View style={styles.card}>
+              <LinearGradient
+                colors={['rgba(255, 215, 0, 0.2)', 'rgba(255, 215, 0, 0.05)']}
+                style={styles.cardGradient}
+              >
+                <Text style={styles.winnerTitle}>🏆 Kazanan</Text>
+                <View style={styles.winnerContainer}>
+                  <Text style={styles.winnerAvatar}>{leaderboard[0][1].avatar}</Text>
+                  <Text style={styles.winnerName}>{leaderboard[0][1].displayName}</Text>
+                  <Text style={styles.winnerCount}>{leaderboard[0][1].beerCount} bira 🍺</Text>
+                </View>
+              </LinearGradient>
+            </View>
+          )}
+
+          {/* Leaderboard Card */}
           <View style={styles.card}>
-            <Text style={styles.cardTitle}>Üyeler ({members.length})</Text>
-            {members.map(([memberId, memberData]) => (
-              <View key={memberId} style={styles.memberItem}>
-                <Text style={styles.memberAvatar}>{memberData.avatar}</Text>
-                <View style={styles.memberInfo}>
-                  <Text style={styles.memberName}>
-                    {memberData.displayName}
-                    {memberId === group.createdBy && (
-                      <Text style={styles.creatorBadge}> 👑 Kurucu</Text>
-                    )}
-                  </Text>
-                  <Text style={styles.memberDate}>
-                    {new Date(memberData.joinedAt).toLocaleDateString('tr-TR')} tarihinde katıldı
+            <Text style={styles.cardTitle}>🏅 Liderlik Tablosu</Text>
+            {leaderboard.map(([memberId, memberData], index) => (
+              <View key={memberId} style={styles.leaderboardItem}>
+                <View style={styles.leaderRank}>
+                  <Text style={styles.rankNumber}>
+                    {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`}
                   </Text>
                 </View>
+                <Text style={styles.leaderAvatar}>{memberData.avatar}</Text>
+                <View style={styles.leaderInfo}>
+                  <Text style={styles.leaderName}>
+                    {memberData.displayName}
+                    {memberId === group.createdBy && (
+                      <Text style={styles.creatorBadge}> 👑</Text>
+                    )}
+                  </Text>
+                  <Text style={styles.leaderBeerCount}>{memberData.beerCount || 0} bira</Text>
+                </View>
+                {memberId === user?.uid && (
+                  <View style={styles.youBadge}>
+                    <Text style={styles.youBadgeText}>Sen</Text>
+                  </View>
+                )}
               </View>
             ))}
           </View>
+
+          {/* Beer Feed */}
+          {beers.length > 0 && (
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>📸 Biralar ({beers.length})</Text>
+              {beers.map((beer) => (
+                <View key={beer.id} style={styles.beerItem}>
+                  <View style={styles.beerHeader}>
+                    <Text style={styles.beerAvatar}>{beer.userAvatar}</Text>
+                    <View style={styles.beerUserInfo}>
+                      <Text style={styles.beerUserName}>{beer.userName}</Text>
+                      <Text style={styles.beerDate}>
+                        {new Date(beer.timestamp).toLocaleDateString('tr-TR', {
+                          day: 'numeric',
+                          month: 'long',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </Text>
+                    </View>
+                  </View>
+                  <Image source={{ uri: beer.photoUrl }} style={styles.beerPhoto} />
+                </View>
+              ))}
+            </View>
+          )}
+
+          {uploading && (
+            <View style={styles.uploadingCard}>
+              <ActivityIndicator size="large" color="#FF9500" />
+              <Text style={styles.uploadingText}>Bira ekleniyor... 🍺</Text>
+            </View>
+          )}
 
           {/* Leave Group Button */}
           {!isCreator && (
@@ -286,6 +467,19 @@ const styles = StyleSheet.create({
     color: '#FF9500',
     fontWeight: '300',
   },
+  addBeerBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 149, 0, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.3)',
+  },
+  addBeerIcon: {
+    fontSize: 20,
+  },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
@@ -381,36 +575,136 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
-  memberItem: {
+  winnerTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#FFD700',
+    textAlign: 'center',
+    marginBottom: 16,
+    letterSpacing: -0.5,
+  },
+  winnerContainer: {
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  winnerAvatar: {
+    fontSize: 64,
+    marginBottom: 12,
+  },
+  winnerName: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  winnerCount: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFD700',
+  },
+  leaderboardItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255, 255, 255, 0.05)',
   },
-  memberAvatar: {
-    fontSize: 32,
-    marginRight: 16,
+  leaderRank: {
+    width: 40,
+    alignItems: 'center',
   },
-  memberInfo: {
+  rankNumber: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  leaderAvatar: {
+    fontSize: 32,
+    marginRight: 12,
+  },
+  leaderInfo: {
     flex: 1,
   },
-  memberName: {
+  leaderName: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginBottom: 4,
+    marginBottom: 2,
     letterSpacing: -0.3,
+  },
+  leaderBeerCount: {
+    fontSize: 14,
+    color: '#999',
+    fontWeight: '600',
+  },
+  youBadge: {
+    backgroundColor: 'rgba(255, 149, 0, 0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.3)',
+  },
+  youBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FF9500',
   },
   creatorBadge: {
     fontSize: 12,
     fontWeight: '600',
     color: '#FFD700',
   },
-  memberDate: {
-    fontSize: 13,
+  beerItem: {
+    marginBottom: 16,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  beerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  beerAvatar: {
+    fontSize: 28,
+    marginRight: 12,
+  },
+  beerUserInfo: {
+    flex: 1,
+  },
+  beerUserName: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginBottom: 2,
+    letterSpacing: -0.3,
+  },
+  beerDate: {
+    fontSize: 12,
     color: '#666',
     fontWeight: '500',
+  },
+  beerPhoto: {
+    width: '100%',
+    height: 250,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  uploadingCard: {
+    backgroundColor: 'rgba(26, 26, 26, 0.8)',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.2)',
+  },
+  uploadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#FF9500',
+    fontWeight: '600',
   },
   leaveButtonWrapper: {
     borderRadius: 16,

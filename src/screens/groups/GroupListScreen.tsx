@@ -124,8 +124,6 @@ export default function GroupListScreen({ navigation }: Props) {
     );
   }
 
-  const canCreateGroup = groups.length < 3;
-
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
@@ -170,7 +168,6 @@ export default function GroupListScreen({ navigation }: Props) {
         <View style={styles.footer}>
           <TouchableOpacity
             onPress={() => navigation.navigate('CreateGroup')}
-            disabled={!canCreateGroup}
             activeOpacity={0.9}
             style={styles.buttonWrapper}
           >
@@ -178,7 +175,7 @@ export default function GroupListScreen({ navigation }: Props) {
               colors={['#FF9500', '#FF7A00']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={[styles.createButton, !canCreateGroup && styles.buttonDisabled]}
+              style={styles.createButton}
             >
               <Text style={styles.buttonText}>+ Yeni Grup</Text>
             </LinearGradient>
@@ -198,10 +195,6 @@ export default function GroupListScreen({ navigation }: Props) {
               <Text style={styles.buttonText}>🔗 Gruba Katıl</Text>
             </LinearGradient>
           </TouchableOpacity>
-
-          {!canCreateGroup && (
-            <Text style={styles.limitWarning}>⚠️ Maksimum 3 gruba üye olabilirsiniz</Text>
-          )}
         </View>
       </LinearGradient>
     </View>

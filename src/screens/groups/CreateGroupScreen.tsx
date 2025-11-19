@@ -27,6 +27,10 @@ interface Props {
 export default function CreateGroupScreen({ navigation }: Props) {
   const { user } = useAuth();
   const [groupName, setGroupName] = useState<string>('');
+  const [startDate, setStartDate] = useState<string>(new Date().toISOString().split('T')[0]); // YYYY-MM-DD
+  const [endDate, setEndDate] = useState<string>(
+    new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] // +7 gün
+  );
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleCreateGroup = async (): Promise<void> => {
@@ -37,6 +41,15 @@ export default function CreateGroupScreen({ navigation }: Props) {
 
     if (groupName.length < 3) {
       Alert.alert('Hata', 'Grup adı en az 3 karakter olmalıdır.');
+      return;
+    }
+
+    // Tarih validasyonu
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+
+    if (end <= start) {
+      Alert.alert('Hata', 'Bitiş tarihi başlangıç tarihinden sonra olmalıdır.');
       return;
     }
 
@@ -51,7 +64,9 @@ export default function CreateGroupScreen({ navigation }: Props) {
       groupName.trim(),
       user.uid,
       user.displayName,
-      user.avatar
+      user.avatar,
+      start.toISOString(),
+      end.toISOString()
     );
 
     setLoading(false);
@@ -131,12 +146,43 @@ export default function CreateGroupScreen({ navigation }: Props) {
                 <Text style={styles.hint}>{groupName.length}/30 karakter</Text>
               </View>
 
+              {/* Date Inputs */}
+              <View style={styles.dateRow}>
+                <View style={[styles.inputWrapper, styles.dateInput]}>
+                  <Text style={styles.label}>Başlangıç 📅</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#666"
+                      value={startDate}
+                      onChangeText={setStartDate}
+                      editable={!loading}
+                    />
+                  </View>
+                </View>
+
+                <View style={[styles.inputWrapper, styles.dateInput]}>
+                  <Text style={styles.label}>Bitiş 🏁</Text>
+                  <View style={styles.inputContainer}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#666"
+                      value={endDate}
+                      onChangeText={setEndDate}
+                      editable={!loading}
+                    />
+                  </View>
+                </View>
+              </View>
+
               {/* Info Box */}
               <View style={styles.infoBox}>
                 <Text style={styles.infoTitle}>ℹ️ Bilgi</Text>
-                <Text style={styles.infoText}>• Maksimum 3 gruba üye olabilirsiniz</Text>
                 <Text style={styles.infoText}>• Grup oluşturulunca size özel bir davet kodu verilecek</Text>
                 <Text style={styles.infoText}>• Bu kodu arkadaşlarınla paylaş!</Text>
+                <Text style={styles.infoText}>• Yarışma tarihleri sonra değiştirilebilir</Text>
               </View>
 
               {/* Create Button */}
@@ -241,6 +287,15 @@ const styles = StyleSheet.create({
   },
   inputWrapper: {
     marginBottom: 20,
+  },
+  dateRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 20,
+  },
+  dateInput: {
+    flex: 1,
+    marginBottom: 0,
   },
   label: {
     fontSize: 14,
