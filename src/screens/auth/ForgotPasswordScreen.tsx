@@ -5,12 +5,11 @@ import {
   TextInput,
   TouchableOpacity,
   StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
   ScrollView,
-  Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
@@ -18,21 +17,17 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthStackParamList } from '../../types';
 
-const { width } = Dimensions.get('window');
-
-type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
+type ForgotPasswordScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
 
 interface Props {
-  navigation: LoginScreenNavigationProp;
+  navigation: ForgotPasswordScreenNavigationProp;
 }
 
-export default function LoginScreen({ navigation }: Props) {
+export default function ForgotPasswordScreen({ navigation }: Props) {
   const [email, setEmail] = useState<string>('');
-  const [password, setPassword] = useState<string>('');
-  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [emailError, setEmailError] = useState<string>('');
-  const [passwordError, setPasswordError] = useState<string>('');
-  const { login, loading } = useAuth();
+  const [loading, setLoading] = useState<boolean>(false);
+  const { resetPassword } = useAuth();
 
   // Email validation
   const validateEmail = (text: string): boolean => {
@@ -50,20 +45,9 @@ export default function LoginScreen({ navigation }: Props) {
     }
   };
 
-  // Handle password change with validation
-  const handlePasswordChange = (text: string): void => {
-    setPassword(text);
-    if (text.length > 0 && text.length < 6) {
-      setPasswordError('Şifre en az 6 karakter olmalı');
-    } else {
-      setPasswordError('');
-    }
-  };
-
-  const handleLogin = async (): Promise<void> => {
-    // Validate
-    if (!email || !password) {
-      Alert.alert('Hata', 'Lütfen email ve şifrenizi girin.');
+  const handleResetPassword = async (): Promise<void> => {
+    if (!email) {
+      Alert.alert('Hata', 'Lütfen email adresinizi girin.');
       return;
     }
 
@@ -72,14 +56,23 @@ export default function LoginScreen({ navigation }: Props) {
       return;
     }
 
-    if (password.length < 6) {
-      setPasswordError('Şifre en az 6 karakter olmalı');
-      return;
-    }
+    setLoading(true);
+    const result = await resetPassword(email);
+    setLoading(false);
 
-    const result = await login(email, password);
-    if (!result.success) {
-      Alert.alert('Giriş Hatası', result.error || 'Giriş yapılamadı.');
+    if (result.success) {
+      Alert.alert(
+        'Başarılı',
+        'Şifre sıfırlama bağlantısı email adresinize gönderildi. Lütfen email kutunuzu kontrol edin.',
+        [
+          {
+            text: 'Tamam',
+            onPress: () => navigation.goBack(),
+          },
+        ]
+      );
+    } else {
+      Alert.alert('Hata', result.error || 'Şifre sıfırlama işlemi başarısız oldu.');
     }
   };
 
@@ -99,6 +92,15 @@ export default function LoginScreen({ navigation }: Props) {
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
+            {/* Back Button */}
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+              disabled={loading}
+            >
+              <Text style={styles.backButtonText}>← Geri</Text>
+            </TouchableOpacity>
+
             {/* Header */}
             <View style={styles.header}>
               <View style={styles.logoContainer}>
@@ -106,10 +108,13 @@ export default function LoginScreen({ navigation }: Props) {
                   colors={['#FF9500', '#FFB84D']}
                   style={styles.logoGradient}
                 >
-                  <Text style={styles.logoEmoji}>🍺</Text>
+                  <Text style={styles.logoEmoji}>🔐</Text>
                 </LinearGradient>
               </View>
-              <Text style={styles.title}>Hell Yeah!</Text>
+              <Text style={styles.title}>Şifremi Unuttum</Text>
+              <Text style={styles.subtitle}>
+                Email adresinize şifre sıfırlama bağlantısı göndereceğiz
+              </Text>
             </View>
 
             {/* Form Card */}
@@ -131,6 +136,7 @@ export default function LoginScreen({ navigation }: Props) {
                     keyboardType="email-address"
                     autoComplete="email"
                     editable={!loading}
+                    autoFocus
                   />
                 </View>
                 {emailError ? (
@@ -138,50 +144,9 @@ export default function LoginScreen({ navigation }: Props) {
                 ) : null}
               </View>
 
-              {/* Password Input */}
-              <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Şifre</Text>
-                <View style={[
-                  styles.inputContainer,
-                  passwordError ? styles.inputError : null
-                ]}>
-                  <TextInput
-                    style={[styles.input, styles.inputWithIcon]}
-                    placeholder="••••••••"
-                    placeholderTextColor="#666"
-                    value={password}
-                    onChangeText={handlePasswordChange}
-                    secureTextEntry={!showPassword}
-                    autoComplete="password"
-                    editable={!loading}
-                  />
-                  <TouchableOpacity
-                    onPress={() => setShowPassword(!showPassword)}
-                    style={styles.eyeIcon}
-                    activeOpacity={0.7}
-                  >
-                    <Text style={styles.eyeIconText}>
-                      {showPassword ? '👁️' : '👁️‍🗨️'}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-                {passwordError ? (
-                  <Text style={styles.errorText}>{passwordError}</Text>
-                ) : null}
-              </View>
-
-              {/* Forgot Password Link */}
+              {/* Reset Button */}
               <TouchableOpacity
-                style={styles.forgotPassword}
-                onPress={() => navigation.navigate('ForgotPassword')}
-                disabled={loading}
-              >
-                <Text style={styles.forgotPasswordText}>Şifremi Unuttum</Text>
-              </TouchableOpacity>
-
-              {/* Login Button */}
-              <TouchableOpacity
-                onPress={handleLogin}
+                onPress={handleResetPassword}
                 disabled={loading}
                 activeOpacity={0.9}
                 style={styles.buttonWrapper}
@@ -190,32 +155,22 @@ export default function LoginScreen({ navigation }: Props) {
                   colors={['#FF9500', '#FF7A00']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
-                  style={[styles.loginButton, loading && styles.buttonDisabled]}
+                  style={[styles.resetButton, loading && styles.buttonDisabled]}
                 >
                   {loading ? (
                     <ActivityIndicator color="#FFF" size="small" />
                   ) : (
-                    <Text style={styles.loginButtonText}>Giriş Yap</Text>
+                    <Text style={styles.resetButtonText}>Şifre Sıfırla</Text>
                   )}
                 </LinearGradient>
               </TouchableOpacity>
 
-              {/* Divider */}
-              <View style={styles.dividerContainer}>
-                <View style={styles.dividerLine} />
-                <Text style={styles.dividerText}>veya</Text>
-                <View style={styles.dividerLine} />
+              {/* Info Box */}
+              <View style={styles.infoBox}>
+                <Text style={styles.infoText}>
+                  Email adresinize gelen bağlantıya tıklayarak yeni şifrenizi belirleyebilirsiniz.
+                </Text>
               </View>
-
-              {/* Register Button */}
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={() => navigation.navigate('Register')}
-                disabled={loading}
-                activeOpacity={0.8}
-              >
-                <Text style={styles.secondaryButtonText}>Hesap Oluştur</Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -238,19 +193,29 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingTop: 60,
+    paddingBottom: 40,
+  },
+  backButton: {
+    marginBottom: 24,
+    alignSelf: 'flex-start',
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FF9500',
   },
   header: {
     alignItems: 'center',
-    marginBottom: 48,
+    marginBottom: 40,
   },
   logoContainer: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   logoGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
+    width: 80,
+    height: 80,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#FF9500',
@@ -260,19 +225,22 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   logoEmoji: {
-    fontSize: 48,
+    fontSize: 40,
   },
   title: {
-    fontSize: 42,
+    fontSize: 32,
     fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 8,
+    marginBottom: 12,
     letterSpacing: -1,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 15,
     color: '#999',
     fontWeight: '500',
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    lineHeight: 22,
   },
   formCard: {
     backgroundColor: 'rgba(26, 26, 26, 0.8)',
@@ -287,7 +255,7 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   inputWrapper: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   label: {
     fontSize: 14,
@@ -301,31 +269,17 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
-    flexDirection: 'row',
-    alignItems: 'center',
   },
   inputError: {
     borderColor: 'rgba(255, 59, 48, 0.5)',
     backgroundColor: 'rgba(255, 59, 48, 0.05)',
   },
   input: {
-    flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 16,
     fontSize: 16,
     color: '#FFF',
     fontWeight: '500',
-  },
-  inputWithIcon: {
-    paddingRight: 50,
-  },
-  eyeIcon: {
-    position: 'absolute',
-    right: 16,
-    padding: 4,
-  },
-  eyeIconText: {
-    fontSize: 20,
   },
   errorText: {
     color: '#FF3B30',
@@ -334,19 +288,10 @@ const styles = StyleSheet.create({
     marginLeft: 4,
     fontWeight: '500',
   },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 16,
-  },
-  forgotPasswordText: {
-    color: '#FF9500',
-    fontSize: 14,
-    fontWeight: '600',
-  },
   buttonWrapper: {
-    marginTop: 8,
+    marginBottom: 20,
   },
-  loginButton: {
+  resetButton: {
     paddingVertical: 18,
     borderRadius: 16,
     alignItems: 'center',
@@ -357,7 +302,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 8,
   },
-  loginButtonText: {
+  resetButtonText: {
     color: '#FFF',
     fontSize: 17,
     fontWeight: '700',
@@ -366,52 +311,18 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.6,
   },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 28,
+  infoBox: {
+    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 149, 0, 0.2)',
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  dividerText: {
-    color: '#666',
-    paddingHorizontal: 16,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  secondaryButton: {
-    paddingVertical: 18,
-    borderRadius: 16,
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  secondaryButtonText: {
-    color: '#FFF',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  guestButton: {
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 16,
-  },
-  guestButtonText: {
-    color: '#999',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  footer: {
-    marginTop: 40,
-    alignItems: 'center',
-  },
-  footerText: {
-    color: '#666',
+  infoText: {
     fontSize: 13,
+    color: '#CCC',
+    lineHeight: 20,
     fontWeight: '500',
+    textAlign: 'center',
   },
 });

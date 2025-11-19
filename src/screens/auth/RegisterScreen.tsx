@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,18 +24,23 @@ interface Props {
 }
 
 export default function RegisterScreen({ navigation }: Props) {
+  const [username, setUsername] = useState<string>('');
   const [displayName, setDisplayName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [confirmPassword, setConfirmPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState<boolean>(false);
+  const [usernameError, setUsernameError] = useState<string>('');
+  const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
+  const [checkingUsername, setCheckingUsername] = useState<boolean>(false);
   const [displayNameError, setDisplayNameError] = useState<string>('');
   const [emailError, setEmailError] = useState<string>('');
   const [passwordError, setPasswordError] = useState<string>('');
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | ''>('');
-  const { register, loading } = useAuth();
+  const { register, loading, checkUsernameAvailability } = useAuth();
+  const usernameCheckTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Email validation
   const validateEmail = (text: string): boolean => {
@@ -143,6 +148,71 @@ export default function RegisterScreen({ navigation }: Props) {
     return { valid: true, error: '' };
   };
 
+  // Username validation
+  const validateUsername = (text: string): { valid: boolean; error: string } => {
+    const trimmed = text.trim().toLowerCase();
+
+    if (trimmed.length === 0) {
+      return { valid: false, error: '' };
+    }
+
+    if (trimmed.length < 3) {
+      return { valid: false, error: 'En az 3 karakter olmalı' };
+    }
+
+    if (trimmed.length > 20) {
+      return { valid: false, error: 'En fazla 20 karakter olabilir' };
+    }
+
+    // Sadece harf, rakam ve alt çizgi
+    if (!/^[a-z0-9_]+$/.test(trimmed)) {
+      return { valid: false, error: 'Sadece harf, rakam ve _ kullanılabilir' };
+    }
+
+    // Rakamla başlayamaz
+    if (/^\d/.test(trimmed)) {
+      return { valid: false, error: 'Rakamla başlayamaz' };
+    }
+
+    return { valid: true, error: '' };
+  };
+
+  // Handle username change with debounced availability check
+  const handleUsernameChange = (text: string): void => {
+    const cleaned = text.toLowerCase().replace(/[^a-z0-9_]/g, '');
+    setUsername(cleaned);
+    setUsernameAvailable(null);
+
+    // Clear previous timeout
+    if (usernameCheckTimeout.current) {
+      clearTimeout(usernameCheckTimeout.current);
+    }
+
+    if (cleaned.length === 0) {
+      setUsernameError('');
+      return;
+    }
+
+    const validation = validateUsername(cleaned);
+    if (!validation.valid) {
+      setUsernameError(validation.error);
+      return;
+    }
+
+    setUsernameError('');
+    setCheckingUsername(true);
+
+    // Debounce the availability check
+    usernameCheckTimeout.current = setTimeout(async () => {
+      const isAvailable = await checkUsernameAvailability(cleaned);
+      setUsernameAvailable(isAvailable);
+      setCheckingUsername(false);
+      if (!isAvailable) {
+        setUsernameError('Bu kullanıcı adı zaten alınmış');
+      }
+    }, 500);
+  };
+
   // Handle input changes with validation
   const handleDisplayNameChange = (text: string): void => {
     setDisplayName(text);
@@ -198,8 +268,19 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const handleRegister = async (): Promise<void> => {
     // Validate all fields
-    if (!displayName || !email || !password || !confirmPassword) {
+    if (!username || !displayName || !email || !password || !confirmPassword) {
       Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+      return;
+    }
+
+    const usernameValidation = validateUsername(username);
+    if (!usernameValidation.valid) {
+      setUsernameError(usernameValidation.error || 'Geçerli bir kullanıcı adı girin');
+      return;
+    }
+
+    if (usernameAvailable === false) {
+      setUsernameError('Bu kullanıcı adı zaten alınmış');
       return;
     }
 
@@ -225,7 +306,7 @@ export default function RegisterScreen({ navigation }: Props) {
       return;
     }
 
-    const result = await register(email, password, displayName);
+    const result = await register(email, password, username, displayName);
     if (!result.success) {
       Alert.alert('Kayıt Hatası', result.error || 'Kayıt oluşturulamadı.');
     } else {
@@ -274,6 +355,44 @@ export default function RegisterScreen({ navigation }: Props) {
 
             {/* Form Card */}
             <View style={styles.formCard}>
+              {/* Username Input */}
+              <View style={styles.inputWrapper}>
+                <Text style={styles.label}>Kullanıcı Adı</Text>
+                <View style={[
+                  styles.inputContainer,
+                  usernameError ? styles.inputError : null,
+                  usernameAvailable === true ? styles.inputSuccess : null
+                ]}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="kullanici_adi"
+                    placeholderTextColor="#666"
+                    value={username}
+                    onChangeText={handleUsernameChange}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!loading}
+                  />
+                  {checkingUsername && (
+                    <ActivityIndicator
+                      size="small"
+                      color="#FF9500"
+                      style={styles.inputIcon}
+                    />
+                  )}
+                  {!checkingUsername && usernameAvailable === true && (
+                    <Text style={styles.availableIcon}>✓</Text>
+                  )}
+                </View>
+                {usernameError ? (
+                  <Text style={styles.errorText}>{usernameError}</Text>
+                ) : usernameAvailable === true ? (
+                  <Text style={styles.successText}>Kullanılabilir</Text>
+                ) : (
+                  <Text style={styles.hintText}>3-20 karakter, harf, rakam ve _</Text>
+                )}
+              </View>
+
               {/* Name Input */}
               <View style={styles.inputWrapper}>
                 <Text style={styles.label}>Ad Soyad</Text>
@@ -546,6 +665,35 @@ const styles = StyleSheet.create({
   inputError: {
     borderColor: 'rgba(255, 59, 48, 0.5)',
     backgroundColor: 'rgba(255, 59, 48, 0.05)',
+  },
+  inputSuccess: {
+    borderColor: 'rgba(52, 199, 89, 0.5)',
+    backgroundColor: 'rgba(52, 199, 89, 0.05)',
+  },
+  inputIcon: {
+    position: 'absolute',
+    right: 16,
+  },
+  availableIcon: {
+    position: 'absolute',
+    right: 16,
+    fontSize: 18,
+    color: '#34C759',
+    fontWeight: '700',
+  },
+  successText: {
+    color: '#34C759',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  hintText: {
+    color: '#666',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
+    fontWeight: '500',
   },
   input: {
     flex: 1,

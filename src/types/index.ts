@@ -2,6 +2,7 @@
 export interface User {
   uid: string;
   email: string;
+  username: string;
   displayName: string;
   avatar: string;
   totalBeers: number;
@@ -46,9 +47,11 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   initializing: boolean;
-  register: (email: string, password: string, displayName: string) => Promise<AuthResult>;
+  register: (email: string, password: string, username: string, displayName: string) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
+  resetPassword: (email: string) => Promise<AuthResult>;
+  checkUsernameAvailability: (username: string) => Promise<boolean>;
   refreshUserData: () => Promise<void>;
 }
 
@@ -61,6 +64,7 @@ export interface AuthResult {
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
+  ForgotPassword: undefined;
 };
 
 export type MainStackParamList = {

@@ -6,6 +6,7 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
+  sendPasswordResetEmail,
   User as FirebaseUser,
 } from 'firebase/auth';
 import { ref, set, get } from 'firebase/database';
@@ -40,6 +41,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser({
           uid: firebaseUser.uid,
           email: firebaseUser.email || '',
+          username: userData?.username || '',
           displayName: firebaseUser.displayName || userData?.displayName || '',
           avatar: userData?.avatar || '🍺',
           totalBeers: userData?.totalBeers || 0,
@@ -75,10 +77,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Kullanıcı adı kontrolü
+  const checkUsernameAvailability = async (username: string): Promise<boolean> => {
+    try {
+      const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
+      const snapshot = await get(usernameRef);
+      return !snapshot.exists();
+    } catch (error) {
+      console.error('Username check error:', error);
+      return false;
+    }
+  };
+
   // Kayıt ol
-  const register = async (email: string, password: string, displayName: string): Promise<AuthResult> => {
+  const register = async (email: string, password: string, username: string, displayName: string): Promise<AuthResult> => {
     try {
       setLoading(true);
+
+      // Username kontrolü
+      const isAvailable = await checkUsernameAvailability(username);
+      if (!isAvailable) {
+        return { success: false, error: 'Bu kullanıcı adı zaten alınmış.' };
+      }
 
       // Firebase Auth ile kullanıcı oluştur
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -87,9 +107,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // Display name güncelle
       await updateProfile(userCredential.user, { displayName });
 
+      // Username'i kaydet (lowercase olarak)
+      const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
+      await set(usernameRef, uid);
+
       // Kullanıcı verisini database'e kaydet
       const userRef = ref(database, `users/${uid}`);
       const userData: Omit<User, 'uid' | 'email'> = {
+        username: username.toLowerCase(),
         displayName,
         avatar: '🍺', // Default avatar
         totalBeers: 0,
@@ -144,6 +169,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Şifre sıfırlama
+  const resetPassword = async (email: string): Promise<AuthResult> => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Reset password error:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // Kullanıcı verilerini yenile
   const refreshUserData = async (): Promise<void> => {
     if (user?.uid) {
@@ -162,6 +198,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     register,
     login,
     logout,
+    resetPassword,
+    checkUsernameAvailability,
     refreshUserData,
   };
 
