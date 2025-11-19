@@ -15,6 +15,7 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import GroupListScreen from '../screens/groups/GroupListScreen';
 import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
 import JoinGroupScreen from '../screens/groups/JoinGroupScreen';
+import GroupDetailScreen from '../screens/groups/GroupDetailScreen';
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -46,6 +47,7 @@ function MainStackNavigator() {
       <MainStack.Screen name="GroupList" component={GroupListScreen} />
       <MainStack.Screen name="CreateGroup" component={CreateGroupScreen} />
       <MainStack.Screen name="JoinGroup" component={JoinGroupScreen} />
+      <MainStack.Screen name="GroupDetail" component={GroupDetailScreen} />
     </MainStack.Navigator>
   );
 }
