@@ -48,7 +48,6 @@ export interface AuthContextType {
   initializing: boolean;
   register: (email: string, password: string, displayName: string) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
-  loginAnonymously: () => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
   refreshUserData: () => Promise<void>;
 }

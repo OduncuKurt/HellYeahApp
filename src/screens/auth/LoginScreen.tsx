@@ -29,24 +29,57 @@ interface Props {
 export default function LoginScreen({ navigation }: Props) {
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
-  const { login, loginAnonymously, loading } = useAuth();
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<string>('');
+  const { login, loading } = useAuth();
+
+  // Email validation
+  const validateEmail = (text: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(text);
+  };
+
+  // Handle email change with validation
+  const handleEmailChange = (text: string): void => {
+    setEmail(text);
+    if (text.length > 0 && !validateEmail(text)) {
+      setEmailError('Geçerli bir email adresi girin');
+    } else {
+      setEmailError('');
+    }
+  };
+
+  // Handle password change with validation
+  const handlePasswordChange = (text: string): void => {
+    setPassword(text);
+    if (text.length > 0 && text.length < 6) {
+      setPasswordError('Şifre en az 6 karakter olmalı');
+    } else {
+      setPasswordError('');
+    }
+  };
 
   const handleLogin = async (): Promise<void> => {
+    // Validate
     if (!email || !password) {
       Alert.alert('Hata', 'Lütfen email ve şifrenizi girin.');
+      return;
+    }
+
+    if (!validateEmail(email)) {
+      setEmailError('Geçerli bir email adresi girin');
+      return;
+    }
+
+    if (password.length < 6) {
+      setPasswordError('Şifre en az 6 karakter olmalı');
       return;
     }
 
     const result = await login(email, password);
     if (!result.success) {
       Alert.alert('Giriş Hatası', result.error || 'Giriş yapılamadı.');
-    }
-  };
-
-  const handleAnonymousLogin = async (): Promise<void> => {
-    const result = await loginAnonymously();
-    if (!result.success) {
-      Alert.alert('Giriş Hatası', result.error || 'Misafir girişi yapılamadı.');
     }
   };
 
@@ -77,7 +110,6 @@ export default function LoginScreen({ navigation }: Props) {
                 </LinearGradient>
               </View>
               <Text style={styles.title}>Hell Yeah!</Text>
-              <Text style={styles.subtitle}>Sosyal Bira Sayacı</Text>
             </View>
 
             {/* Form Card */}
@@ -85,36 +117,57 @@ export default function LoginScreen({ navigation }: Props) {
               {/* Email Input */}
               <View style={styles.inputWrapper}>
                 <Text style={styles.label}>E-posta</Text>
-                <View style={styles.inputContainer}>
+                <View style={[
+                  styles.inputContainer,
+                  emailError ? styles.inputError : null
+                ]}>
                   <TextInput
                     style={styles.input}
                     placeholder="ornek@email.com"
                     placeholderTextColor="#666"
                     value={email}
-                    onChangeText={setEmail}
+                    onChangeText={handleEmailChange}
                     autoCapitalize="none"
                     keyboardType="email-address"
                     autoComplete="email"
                     editable={!loading}
                   />
                 </View>
+                {emailError ? (
+                  <Text style={styles.errorText}>{emailError}</Text>
+                ) : null}
               </View>
 
               {/* Password Input */}
               <View style={styles.inputWrapper}>
                 <Text style={styles.label}>Şifre</Text>
-                <View style={styles.inputContainer}>
+                <View style={[
+                  styles.inputContainer,
+                  passwordError ? styles.inputError : null
+                ]}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, styles.inputWithIcon]}
                     placeholder="••••••••"
                     placeholderTextColor="#666"
                     value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
+                    onChangeText={handlePasswordChange}
+                    secureTextEntry={!showPassword}
                     autoComplete="password"
                     editable={!loading}
                   />
+                  <TouchableOpacity
+                    onPress={() => setShowPassword(!showPassword)}
+                    style={styles.eyeIcon}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.eyeIconText}>
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
+                {passwordError ? (
+                  <Text style={styles.errorText}>{passwordError}</Text>
+                ) : null}
               </View>
 
               {/* Login Button */}
@@ -154,25 +207,6 @@ export default function LoginScreen({ navigation }: Props) {
               >
                 <Text style={styles.secondaryButtonText}>Hesap Oluştur</Text>
               </TouchableOpacity>
-
-              {/* Guest Login */}
-              <TouchableOpacity
-                style={styles.guestButton}
-                onPress={handleAnonymousLogin}
-                disabled={loading}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.guestButtonText}>
-                  👤 Misafir olarak devam et
-                </Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-              <Text style={styles.footerText}>
-                Arkadaşlarınla bira keyfi için tasarlandı
-              </Text>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -258,12 +292,37 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  inputError: {
+    borderColor: 'rgba(255, 59, 48, 0.5)',
+    backgroundColor: 'rgba(255, 59, 48, 0.05)',
   },
   input: {
+    flex: 1,
     paddingHorizontal: 20,
     paddingVertical: 16,
     fontSize: 16,
     color: '#FFF',
+    fontWeight: '500',
+  },
+  inputWithIcon: {
+    paddingRight: 50,
+  },
+  eyeIcon: {
+    position: 'absolute',
+    right: 16,
+    padding: 4,
+  },
+  eyeIconText: {
+    fontSize: 20,
+  },
+  errorText: {
+    color: '#FF3B30',
+    fontSize: 12,
+    marginTop: 6,
+    marginLeft: 4,
     fontWeight: '500',
   },
   buttonWrapper: {

@@ -45,7 +45,8 @@
           "photosPermission": "Galeriden fotoğraf seçmek için izin gereklidir."
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ]
   }
 }
