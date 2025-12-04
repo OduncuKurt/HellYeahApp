@@ -5,18 +5,22 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Image,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
+import CommentSection from '../../components/CommentSection';
+import EmojiPicker from '../../components/EmojiPicker';
+import ReactionBar from '../../components/ReactionBar';
 import { useAuth } from '../../contexts/AuthContext';
-import { addBeer, getGroupBeers } from '../../services/beerService';
+import { addBeer, addReaction, getGroupBeers, removeReaction } from '../../services/beerService';
+import { addComment, deleteComment } from '../../services/commentService';
 import { getGroupDetails, leaveGroup } from '../../services/groupService';
 import { Beer, Group, MainStackParamList } from '../../types';
 
@@ -35,6 +39,8 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [emojiPickerVisible, setEmojiPickerVisible] = useState<boolean>(false);
+  const [selectedBeerId, setSelectedBeerId] = useState<string | null>(null);
 
   useEffect(() => {
     loadGroupDetails();
@@ -151,6 +157,60 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
         },
       ]
     );
+  };
+
+  const handleReactionPress = (beerId: string) => {
+    setSelectedBeerId(beerId);
+    setEmojiPickerVisible(true);
+  };
+
+  const handleSelectEmoji = async (emoji: string) => {
+    if (!user || !selectedBeerId) return;
+
+    if (emoji === '') {
+      // Reaksiyonu kaldır
+      const result = await removeReaction(groupId, selectedBeerId, user.uid);
+      if (result.success) {
+        loadGroupDetails();
+      }
+    } else {
+      // Reaksiyon ekle/güncelle
+      const result = await addReaction(groupId, selectedBeerId, user.uid, emoji);
+      if (result.success) {
+        loadGroupDetails();
+      }
+    }
+  };
+
+  const handleAddComment = async (beerId: string, text: string) => {
+    if (!user) return;
+
+    const result = await addComment(
+      groupId,
+      beerId,
+      user.uid,
+      user.displayName,
+      user.avatar,
+      text
+    );
+
+    if (result.success) {
+      loadGroupDetails();
+    } else {
+      Alert.alert('Hata', result.error || 'Yorum eklenemedi.');
+    }
+  };
+
+  const handleDeleteComment = async (beerId: string, commentId: string) => {
+    if (!user) return;
+
+    const result = await deleteComment(groupId, beerId, commentId, user.uid);
+
+    if (result.success) {
+      loadGroupDetails();
+    } else {
+      Alert.alert('Hata', result.error || 'Yorum silinemedi.');
+    }
   };
 
   if (loading) {
@@ -320,6 +380,27 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
                     </View>
                   </View>
                   <Image source={{ uri: beer.photoUrl }} style={styles.beerPhoto} />
+                  
+                  {/* Reactions */}
+                  {user && (
+                    <ReactionBar
+                      reactions={beer.reactions}
+                      currentUserId={user.uid}
+                      onPress={() => handleReactionPress(beer.id)}
+                    />
+                  )}
+                  
+                  {/* Comments */}
+                  {user && (
+                    <CommentSection
+                      comments={beer.comments}
+                      currentUserId={user.uid}
+                      currentUserName={user.displayName}
+                      currentUserAvatar={user.avatar}
+                      onAddComment={(text) => handleAddComment(beer.id, text)}
+                      onDeleteComment={(commentId) => handleDeleteComment(beer.id, commentId)}
+                    />
+                  )}
                 </View>
               ))}
             </View>
@@ -357,6 +438,18 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
           )}
         </ScrollView>
       </LinearGradient>
+      
+      {/* Emoji Picker Modal */}
+      {user && (
+        <EmojiPicker
+          visible={emojiPickerVisible}
+          onClose={() => setEmojiPickerVisible(false)}
+          onSelectEmoji={handleSelectEmoji}
+          currentEmoji={
+            selectedBeerId ? beers.find(b => b.id === selectedBeerId)?.reactions?.[user.uid] : undefined
+          }
+        />
+      )}
     </View>
   );
 }

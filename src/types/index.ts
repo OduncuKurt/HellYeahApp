@@ -20,7 +20,7 @@ export interface Group {
   inviteCode: string;
   members: { [userId: string]: GroupMember };
   startDate: string; // Yarışma başlangıç tarihi (ISO string)
-  endDate: string;   // Yarışma bitiş tarihi (ISO string)
+  endDate: string; // Yarışma bitiş tarihi (ISO string)
   beers?: { [beerId: string]: Beer }; // Grupta eklenen biralar
 }
 
@@ -40,6 +40,17 @@ export interface Beer {
   photoUrl: string;
   timestamp: number;
   reactions?: { [userId: string]: string };
+  comments?: { [commentId: string]: Comment };
+}
+
+// Comment Types
+export interface Comment {
+  id: string;
+  userId: string;
+  userName: string;
+  userAvatar: string;
+  text: string;
+  timestamp: number;
 }
 
 // Auth Types
@@ -47,7 +58,12 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   initializing: boolean;
-  register: (email: string, password: string, username: string, displayName: string) => Promise<AuthResult>;
+  register: (
+    email: string,
+    password: string,
+    username: string,
+    displayName: string
+  ) => Promise<AuthResult>;
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
   resetPassword: (email: string) => Promise<AuthResult>;

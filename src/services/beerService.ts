@@ -1,5 +1,5 @@
-import { ref as dbRef, push, set, get, update, increment } from 'firebase/database';
-import { ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref as dbRef, get, increment, push, set } from 'firebase/database';
+import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { database, storage } from '../../firebaseConfig';
 import { Beer } from '../types';
 
@@ -131,3 +131,63 @@ export const deleteBeer = async (
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Biraya emoji reaksiyonu ekler veya günceller
+ */
+export const addReaction = async (
+  groupId: string,
+  beerId: string,
+  userId: string,
+  emoji: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const reactionRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions/${userId}`);
+    await set(reactionRef, emoji);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Add reaction error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Kullanıcının reaksiyonunu kaldırır
+ */
+export const removeReaction = async (
+  groupId: string,
+  beerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const reactionRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions/${userId}`);
+    await set(reactionRef, null);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Remove reaction error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+/**
+ * Bir biranın tüm reaksiyonlarını getirir
+ */
+export const getReactions = async (
+  groupId: string,
+  beerId: string
+): Promise<{ [userId: string]: string }> => {
+  try {
+    const reactionsRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions`);
+    const snapshot = await get(reactionsRef);
+
+    if (!snapshot.exists()) {
+      return {};
+    }
+
+    return snapshot.val();
+  } catch (error) {
+    console.error('Get reactions error:', error);
+    return {};
+  }
+};
+
