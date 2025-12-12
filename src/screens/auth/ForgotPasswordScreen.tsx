@@ -11,7 +11,6 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useAuth } from '../../contexts/AuthContext';
@@ -78,103 +77,83 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
-      <LinearGradient
-        colors={['#0F0F0F', '#1A1A1A', '#0F0F0F']}
-        style={styles.gradient}
+      <StatusBar style="dark" />
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardView}
       >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          style={styles.keyboardView}
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
+          {/* Back Button */}
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            disabled={loading}
           >
-            {/* Back Button */}
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
+
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.title}>Forgot Password</Text>
+            <Text style={styles.subtitle}>
+              We'll send you a reset link to your email
+            </Text>
+          </View>
+
+          {/* Form Card */}
+          <View style={styles.formCard}>
+            {/* Email Input */}
+            <View style={styles.inputWrapper}>
+              <Text style={styles.label}>Email</Text>
+              <View style={[
+                styles.inputContainer,
+                emailError ? styles.inputError : null
+              ]}>
+                <TextInput
+                  style={styles.input}
+                  placeholder="your@email.com"
+                  placeholderTextColor="#999"
+                  value={email}
+                  onChangeText={handleEmailChange}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  editable={!loading}
+                  autoFocus
+                />
+              </View>
+              {emailError ? (
+                <Text style={styles.errorText}>{emailError}</Text>
+              ) : null}
+            </View>
+
+            {/* Reset Button */}
             <TouchableOpacity
-              style={styles.backButton}
-              onPress={() => navigation.goBack()}
+              onPress={handleResetPassword}
               disabled={loading}
+              activeOpacity={0.9}
+              style={[styles.resetButton, loading && styles.buttonDisabled]}
             >
-              <Text style={styles.backButtonText}>← Geri</Text>
+              {loading ? (
+                <ActivityIndicator color="#FFF" size="small" />
+              ) : (
+                <Text style={styles.resetButtonText}>Reset Password</Text>
+              )}
             </TouchableOpacity>
 
-            {/* Header */}
-            <View style={styles.header}>
-              <View style={styles.logoContainer}>
-                <LinearGradient
-                  colors={['#FF9500', '#FFB84D']}
-                  style={styles.logoGradient}
-                >
-                  <Text style={styles.logoEmoji}>🔐</Text>
-                </LinearGradient>
-              </View>
-              <Text style={styles.title}>Şifremi Unuttum</Text>
-              <Text style={styles.subtitle}>
-                Email adresinize şifre sıfırlama bağlantısı göndereceğiz
+            {/* Info Box */}
+            <View style={styles.infoBox}>
+              <Text style={styles.infoText}>
+                Click the link in your email to set a new password
               </Text>
             </View>
-
-            {/* Form Card */}
-            <View style={styles.formCard}>
-              {/* Email Input */}
-              <View style={styles.inputWrapper}>
-                <Text style={styles.label}>E-posta</Text>
-                <View style={[
-                  styles.inputContainer,
-                  emailError ? styles.inputError : null
-                ]}>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="ornek@email.com"
-                    placeholderTextColor="#666"
-                    value={email}
-                    onChangeText={handleEmailChange}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    autoComplete="email"
-                    editable={!loading}
-                    autoFocus
-                  />
-                </View>
-                {emailError ? (
-                  <Text style={styles.errorText}>{emailError}</Text>
-                ) : null}
-              </View>
-
-              {/* Reset Button */}
-              <TouchableOpacity
-                onPress={handleResetPassword}
-                disabled={loading}
-                activeOpacity={0.9}
-                style={styles.buttonWrapper}
-              >
-                <LinearGradient
-                  colors={['#FF9500', '#FF7A00']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 0 }}
-                  style={[styles.resetButton, loading && styles.buttonDisabled]}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#FFF" size="small" />
-                  ) : (
-                    <Text style={styles.resetButtonText}>Şifre Sıfırla</Text>
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-
-              {/* Info Box */}
-              <View style={styles.infoBox}>
-                <Text style={styles.infoText}>
-                  Email adresinize gelen bağlantıya tıklayarak yeni şifrenizi belirleyebilirsiniz.
-                </Text>
-              </View>
-            </View>
-          </ScrollView>
-        </KeyboardAvoidingView>
-      </LinearGradient>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -182,10 +161,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F0F0F',
-  },
-  gradient: {
-    flex: 1,
+    backgroundColor: '#FAFAFA',
   },
   keyboardView: {
     flex: 1,
@@ -203,56 +179,33 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#FF9500',
+    color: '#000',
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoContainer: {
-    marginBottom: 20,
-  },
-  logoGradient: {
-    width: 80,
-    height: 80,
-    borderRadius: 24,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 12,
-  },
-  logoEmoji: {
-    fontSize: 40,
-  },
   title: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#000',
     marginBottom: 12,
-    letterSpacing: -1,
+    letterSpacing: -0.5,
   },
   subtitle: {
     fontSize: 15,
-    color: '#999',
+    color: '#666',
     fontWeight: '500',
     textAlign: 'center',
     paddingHorizontal: 20,
     lineHeight: 22,
   },
   formCard: {
-    backgroundColor: 'rgba(26, 26, 26, 0.8)',
-    borderRadius: 24,
+    backgroundColor: '#FFF',
+    borderRadius: 16,
     padding: 24,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 8,
+    borderWidth: 0.5,
+    borderColor: '#E0E0E0',
   },
   inputWrapper: {
     marginBottom: 24,
@@ -260,67 +213,58 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#FFF',
-    marginBottom: 10,
-    marginLeft: 4,
+    color: '#000',
+    marginBottom: 8,
   },
   inputContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
-    borderRadius: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    borderColor: '#E0E0E0',
   },
   inputError: {
-    borderColor: 'rgba(255, 59, 48, 0.5)',
+    borderColor: '#FF3B30',
     backgroundColor: 'rgba(255, 59, 48, 0.05)',
   },
   input: {
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    color: '#FFF',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    color: '#000',
     fontWeight: '500',
   },
   errorText: {
     color: '#FF3B30',
     fontSize: 12,
     marginTop: 6,
-    marginLeft: 4,
     fontWeight: '500',
   },
-  buttonWrapper: {
-    marginBottom: 20,
-  },
   resetButton: {
-    paddingVertical: 18,
-    borderRadius: 16,
+    paddingVertical: 16,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#FF9500',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    backgroundColor: '#000',
+    marginBottom: 20,
   },
   resetButtonText: {
     color: '#FFF',
-    fontSize: 17,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+    fontSize: 16,
+    fontWeight: '600',
   },
   buttonDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   infoBox: {
-    backgroundColor: 'rgba(255, 149, 0, 0.1)',
+    backgroundColor: '#F5F5F5',
     borderRadius: 12,
     padding: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 149, 0, 0.2)',
+    borderWidth: 0.5,
+    borderColor: '#E0E0E0',
   },
   infoText: {
     fontSize: 13,
-    color: '#CCC',
+    color: '#666',
     lineHeight: 20,
     fontWeight: '500',
     textAlign: 'center',

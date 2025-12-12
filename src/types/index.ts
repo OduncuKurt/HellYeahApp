@@ -6,29 +6,21 @@ export interface User {
   displayName: string;
   avatar: string;
   totalBeers: number;
+  beersByYear: { [year: string]: number }; // { "2025": 12, "2026": 45 }
+  friends: { [friendUid: string]: number }; // timestamp when became friends
   createdAt: string;
-  groups: { [groupId: string]: boolean };
 }
 
-// Group Types
-export interface Group {
+// Friend Types
+export interface FriendRequest {
   id: string;
-  name: string;
-  createdBy: string;
-  createdAt: string;
-  totalBeers: number;
-  inviteCode: string;
-  members: { [userId: string]: GroupMember };
-  startDate: string; // Yarışma başlangıç tarihi (ISO string)
-  endDate: string; // Yarışma bitiş tarihi (ISO string)
-  beers?: { [beerId: string]: Beer }; // Grupta eklenen biralar
-}
-
-export interface GroupMember {
-  joinedAt: string;
-  displayName: string;
-  avatar: string;
-  beerCount: number; // Kullanıcının bu gruptaki bira sayısı
+  fromUserId: string;
+  fromUsername: string;
+  fromDisplayName: string;
+  fromAvatar: string;
+  toUserId: string;
+  status: 'pending' | 'accepted' | 'rejected';
+  timestamp: number;
 }
 
 // Beer Types
@@ -39,8 +31,9 @@ export interface Beer {
   userAvatar: string;
   photoUrl: string;
   timestamp: number;
-  reactions?: { [userId: string]: string };
-  comments?: { [commentId: string]: Comment };
+  year: number; // 2025, 2026, etc.
+  reactions?: { [userId: string]: string }; // { "userId": "🍻" }
+  comments?: Comment[];
 }
 
 // Comment Types
@@ -84,10 +77,11 @@ export type AuthStackParamList = {
 };
 
 export type MainStackParamList = {
-  GroupList: undefined;
-  CreateGroup: undefined;
-  JoinGroup: { inviteCode: string };
-  GroupDetail: { groupId: string };
+  Feed: undefined;
+  Friends: undefined;
+  Leaderboard: undefined;
+  Profile: { userId?: string }; // undefined = own profile
+  BeerDetail: { beerId: string };
 };
 
 export type RootStackParamList = AuthStackParamList & MainStackParamList;

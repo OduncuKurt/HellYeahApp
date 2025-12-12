@@ -1,13 +1,12 @@
-import { ref as dbRef, get, increment, push, set } from 'firebase/database';
+import { ref as dbRef, get, increment, push, set, query, orderByChild, limitToLast } from 'firebase/database';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
-import { database, storage } from '../../firebaseConfig';
-import { Beer } from '../types';
+import { database, storage } from '../config/firebase';
+import { Beer, Comment } from '../types';
 
 /**
  * Yeni bira ekler (fotoğraf ile)
  */
 export const addBeer = async (
-  groupId: string,
   userId: string,
   userName: string,
   userAvatar: string,
@@ -16,8 +15,9 @@ export const addBeer = async (
   try {
     // 1. Fotoğrafı Firebase Storage'a yükle
     const timestamp = Date.now();
+    const year = new Date().getFullYear();
     const filename = `${userId}_${timestamp}.jpg`;
-    const photoPath = `beers/${groupId}/${filename}`;
+    const photoPath = `beers/${year}/${filename}`;
 
     // Fotoğraf blob'unu oluştur
     const response = await fetch(photoUri);
@@ -31,7 +31,7 @@ export const addBeer = async (
     const photoUrl = await getDownloadURL(photoStorageRef);
 
     // 2. Bira verisini oluştur
-    const beersRef = dbRef(database, `groups/${groupId}/beers`);
+    const beersRef = dbRef(database, 'beers');
     const newBeerRef = push(beersRef);
     const beerId = newBeerRef.key!;
 
@@ -41,21 +41,20 @@ export const addBeer = async (
       userAvatar,
       photoUrl,
       timestamp,
+      year,
+      reactions: {},
+      comments: [],
     };
 
     await set(newBeerRef, beerData);
 
-    // 3. Kullanıcının bira sayısını artır
-    const memberBeerCountRef = dbRef(database, `groups/${groupId}/members/${userId}/beerCount`);
-    await set(memberBeerCountRef, increment(1));
-
-    // 4. Grup toplam bira sayısını artır
-    const groupTotalBeersRef = dbRef(database, `groups/${groupId}/totalBeers`);
-    await set(groupTotalBeersRef, increment(1));
-
-    // 5. Kullanıcının toplam bira sayısını artır (global)
+    // 3. Kullanıcının toplam bira sayısını artır
     const userTotalBeersRef = dbRef(database, `users/${userId}/totalBeers`);
     await set(userTotalBeersRef, increment(1));
+
+    // 4. Kullanıcının yıllık bira sayısını artır
+    const userYearBeersRef = dbRef(database, `users/${userId}/beersByYear/${year}`);
+    await set(userYearBeersRef, increment(1));
 
     return { success: true, beerId };
   } catch (error: any) {
@@ -65,11 +64,11 @@ export const addBeer = async (
 };
 
 /**
- * Gruptaki tüm biraları getirir
+ * Arkadaşlarının biralarını getirir (feed için)
  */
-export const getGroupBeers = async (groupId: string): Promise<Beer[]> => {
+export const getFriendsFeed = async (userId: string, friendIds: string[]): Promise<Beer[]> => {
   try {
-    const beersRef = dbRef(database, `groups/${groupId}/beers`);
+    const beersRef = dbRef(database, 'beers');
     const snapshot = await get(beersRef);
 
     if (!snapshot.exists()) {
@@ -77,16 +76,69 @@ export const getGroupBeers = async (groupId: string): Promise<Beer[]> => {
     }
 
     const beersData = snapshot.val();
-    const beers: Beer[] = Object.keys(beersData).map((beerId) => ({
-      id: beerId,
-      ...beersData[beerId],
-    }));
+    const allUserIds = [userId, ...friendIds];
+
+    const beers: Beer[] = Object.keys(beersData)
+      .filter((beerId) => allUserIds.includes(beersData[beerId].userId))
+      .map((beerId) => ({
+        id: beerId,
+        ...beersData[beerId],
+      }));
 
     // Zamana göre sırala (yeniden eskiye)
     return beers.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
-    console.error('Get group beers error:', error);
+    console.error('Get friends feed error:', error);
     return [];
+  }
+};
+
+/**
+ * Kullanıcının biralarını getirir
+ */
+export const getUserBeers = async (userId: string): Promise<Beer[]> => {
+  try {
+    const beersRef = dbRef(database, 'beers');
+    const snapshot = await get(beersRef);
+
+    if (!snapshot.exists()) {
+      return [];
+    }
+
+    const beersData = snapshot.val();
+    const beers: Beer[] = Object.keys(beersData)
+      .filter((beerId) => beersData[beerId].userId === userId)
+      .map((beerId) => ({
+        id: beerId,
+        ...beersData[beerId],
+      }));
+
+    return beers.sort((a, b) => b.timestamp - a.timestamp);
+  } catch (error) {
+    console.error('Get user beers error:', error);
+    return [];
+  }
+};
+
+/**
+ * Tek bir birayı getirir
+ */
+export const getBeer = async (beerId: string): Promise<Beer | null> => {
+  try {
+    const beerRef = dbRef(database, `beers/${beerId}`);
+    const snapshot = await get(beerRef);
+
+    if (!snapshot.exists()) {
+      return null;
+    }
+
+    return {
+      id: beerId,
+      ...snapshot.val(),
+    };
+  } catch (error) {
+    console.error('Get beer error:', error);
+    return null;
   }
 };
 
@@ -94,13 +146,12 @@ export const getGroupBeers = async (groupId: string): Promise<Beer[]> => {
  * Bira siler (sadece kendi birasını silebilir)
  */
 export const deleteBeer = async (
-  groupId: string,
   beerId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Bira sahibini kontrol et
-    const beerRef = dbRef(database, `groups/${groupId}/beers/${beerId}`);
+    const beerRef = dbRef(database, `beers/${beerId}`);
     const snapshot = await get(beerRef);
 
     if (!snapshot.exists()) {
@@ -116,14 +167,11 @@ export const deleteBeer = async (
     await set(beerRef, null);
 
     // Sayaçları azalt
-    const memberBeerCountRef = dbRef(database, `groups/${groupId}/members/${userId}/beerCount`);
-    await set(memberBeerCountRef, increment(-1));
-
-    const groupTotalBeersRef = dbRef(database, `groups/${groupId}/totalBeers`);
-    await set(groupTotalBeersRef, increment(-1));
-
     const userTotalBeersRef = dbRef(database, `users/${userId}/totalBeers`);
     await set(userTotalBeersRef, increment(-1));
+
+    const userYearBeersRef = dbRef(database, `users/${userId}/beersByYear/${beerData.year}`);
+    await set(userYearBeersRef, increment(-1));
 
     return { success: true };
   } catch (error: any) {
@@ -136,13 +184,12 @@ export const deleteBeer = async (
  * Biraya emoji reaksiyonu ekler veya günceller
  */
 export const addReaction = async (
-  groupId: string,
   beerId: string,
   userId: string,
   emoji: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const reactionRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions/${userId}`);
+    const reactionRef = dbRef(database, `beers/${beerId}/reactions/${userId}`);
     await set(reactionRef, emoji);
     return { success: true };
   } catch (error: any) {
@@ -155,12 +202,11 @@ export const addReaction = async (
  * Kullanıcının reaksiyonunu kaldırır
  */
 export const removeReaction = async (
-  groupId: string,
   beerId: string,
   userId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const reactionRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions/${userId}`);
+    const reactionRef = dbRef(database, `beers/${beerId}/reactions/${userId}`);
     await set(reactionRef, null);
     return { success: true };
   } catch (error: any) {
@@ -170,24 +216,61 @@ export const removeReaction = async (
 };
 
 /**
- * Bir biranın tüm reaksiyonlarını getirir
+ * Biraya yorum ekler
  */
-export const getReactions = async (
-  groupId: string,
-  beerId: string
-): Promise<{ [userId: string]: string }> => {
+export const addComment = async (
+  beerId: string,
+  userId: string,
+  userName: string,
+  userAvatar: string,
+  text: string
+): Promise<{ success: boolean; commentId?: string; error?: string }> => {
   try {
-    const reactionsRef = dbRef(database, `groups/${groupId}/beers/${beerId}/reactions`);
-    const snapshot = await get(reactionsRef);
+    const commentsRef = dbRef(database, `beers/${beerId}/comments`);
+    const newCommentRef = push(commentsRef);
+    const commentId = newCommentRef.key!;
 
-    if (!snapshot.exists()) {
-      return {};
-    }
+    const commentData: Omit<Comment, 'id'> = {
+      userId,
+      userName,
+      userAvatar,
+      text,
+      timestamp: Date.now(),
+    };
 
-    return snapshot.val();
-  } catch (error) {
-    console.error('Get reactions error:', error);
-    return {};
+    await set(newCommentRef, commentData);
+    return { success: true, commentId };
+  } catch (error: any) {
+    console.error('Add comment error:', error);
+    return { success: false, error: error.message };
   }
 };
 
+/**
+ * Yorum siler (sadece kendi yorumunu silebilir)
+ */
+export const deleteComment = async (
+  beerId: string,
+  commentId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const commentRef = dbRef(database, `beers/${beerId}/comments/${commentId}`);
+    const snapshot = await get(commentRef);
+
+    if (!snapshot.exists()) {
+      return { success: false, error: 'Yorum bulunamadı.' };
+    }
+
+    const commentData = snapshot.val();
+    if (commentData.userId !== userId) {
+      return { success: false, error: 'Sadece kendi yorumunu silebilirsin.' };
+    }
+
+    await set(commentRef, null);
+    return { success: true };
+  } catch (error: any) {
+    console.error('Delete comment error:', error);
+    return { success: false, error: error.message };
+  }
+};

@@ -45,8 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           displayName: firebaseUser.displayName || userData?.displayName || '',
           avatar: userData?.avatar || '🍺',
           totalBeers: userData?.totalBeers || 0,
+          beersByYear: userData?.beersByYear || {},
+          friends: userData?.friends || {},
           createdAt: userData?.createdAt || new Date().toISOString(),
-          groups: userData?.groups || {},
         });
       } else {
         // Kullanıcı çıkış yapmış
@@ -118,8 +119,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         displayName,
         avatar: '🍺', // Default avatar
         totalBeers: 0,
+        beersByYear: {},
+        friends: {},
         createdAt: new Date().toISOString(),
-        groups: {},
       };
       await set(userRef, userData);
 

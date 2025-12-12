@@ -13,10 +13,11 @@ import RegisterScreen from '../screens/auth/RegisterScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 // Main Screens
-import GroupListScreen from '../screens/groups/GroupListScreen';
-import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
-import JoinGroupScreen from '../screens/groups/JoinGroupScreen';
-import GroupDetailScreen from '../screens/groups/GroupDetailScreen';
+import FeedScreen from '../screens/feed/FeedScreen';
+import FriendsScreen from '../screens/friends/FriendsScreen';
+import LeaderboardScreen from '../screens/leaderboard/LeaderboardScreen';
+import ProfileScreen from '../screens/profile/ProfileScreen';
+import BeerDetailScreen from '../screens/beer/BeerDetailScreen';
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -46,27 +47,25 @@ function MainStackNavigator() {
         cardStyle: { backgroundColor: '#1a1a1a' },
       }}
     >
-      <MainStack.Screen name="GroupList" component={GroupListScreen} />
-      <MainStack.Screen name="CreateGroup" component={CreateGroupScreen} />
-      <MainStack.Screen name="JoinGroup" component={JoinGroupScreen} />
-      <MainStack.Screen name="GroupDetail" component={GroupDetailScreen} />
+      <MainStack.Screen name="Feed" component={FeedScreen} />
+      <MainStack.Screen name="Friends" component={FriendsScreen} />
+      <MainStack.Screen name="Leaderboard" component={LeaderboardScreen} />
+      <MainStack.Screen name="Profile" component={ProfileScreen} />
+      <MainStack.Screen name="BeerDetail" component={BeerDetailScreen} />
     </MainStack.Navigator>
   );
 }
 
-// Deep Linking Configuration
+// Deep Linking Configuration (opsiyonel - şimdilik basit)
 const linking: LinkingOptions<any> = {
   prefixes: [Linking.createURL('/'), 'hellyeahapp://'],
   config: {
     screens: {
-      GroupList: 'groups',
-      JoinGroup: {
-        path: 'invite/:inviteCode',
-        parse: {
-          inviteCode: (inviteCode: string) => inviteCode,
-        },
-      },
-      CreateGroup: 'create',
+      Feed: 'feed',
+      Friends: 'friends',
+      Leaderboard: 'leaderboard',
+      Profile: 'profile/:userId?',
+      BeerDetail: 'beer/:beerId',
     },
   },
 };
