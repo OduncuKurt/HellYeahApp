@@ -4,9 +4,14 @@
     "slug": "hell-yeah-app-rn",
     "version": "1.0.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
       "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/adaptive-icon.png",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
@@ -24,13 +29,25 @@
     "android": {
       "package": "com.hellyeahapp.rn",
       "permissions": [
-        "CAMERA",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE"
+        "android.permission.CAMERA",
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
       ]
     },
     "web": {
-      "bundler": "metro"
+      "bundler": "metro",
+      "favicon": "./assets/favicon.png",
+      "name": "Hell Yeah",
+      "shortName": "Hell Yeah",
+      "description": "Track your beers with friends!",
+      "themeColor": "#000000",
+      "backgroundColor": "#ffffff",
+      "display": "standalone",
+      "orientation": "portrait",
+      "scope": "/",
+      "startUrl": "/"
     },
     "plugins": [
       [
@@ -47,6 +64,11 @@
       ],
       "expo-asset",
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "78dac0ba-42ea-41b2-90d4-357bbabce184"
+      }
+    }
   }
 }

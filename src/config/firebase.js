@@ -1,8 +1,14 @@
 import { initializeApp } from 'firebase/app';
+import { getAuth, getReactNativePersistence, initializeAuth } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Platform } from 'react-native';
+
+// Platform detection for AsyncStorage import
+let AsyncStorage;
+if (Platform.OS !== 'web') {
+  AsyncStorage = require('@react-native-async-storage/async-storage').default;
+}
 
 // Firebase yapılandırması
 const firebaseConfig = {
@@ -18,10 +24,12 @@ const firebaseConfig = {
 // Firebase'i başlat
 const app = initializeApp(firebaseConfig);
 
-// Auth'u React Native AsyncStorage persistence ile başlat
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(AsyncStorage)
-});
+// Auth'u platform'a göre persistence ile başlat
+export const auth = Platform.OS === 'web'
+  ? getAuth(app) // Web için default (browser local storage)
+  : initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage)
+    });
 
 // Database ve Storage referanslarını export et
 export const database = getDatabase(app);

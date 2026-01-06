@@ -8,6 +8,8 @@ import {
     Alert,
     FlatList,
     Image,
+    Platform,
+    Pressable,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -132,9 +134,15 @@ export default function ProfileScreen({ navigation, route }: Props) {
         </TouchableOpacity>
         <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         {isOwnProfile && (
-          <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={[styles.logoutText, { color: colors.error }]}>Logout</Text>
-          </TouchableOpacity>
+          Platform.OS === 'web' ? (
+            <Pressable onPress={handleLogout} style={styles.logoutBtn}>
+              <Text style={[styles.logoutText, { color: colors.error }]}>Logout</Text>
+            </Pressable>
+          ) : (
+            <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
+              <Text style={[styles.logoutText, { color: colors.error }]}>Logout</Text>
+            </TouchableOpacity>
+          )
         )}
         {!isOwnProfile && <View style={styles.backBtn} />}
       </View>
@@ -208,6 +216,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
             <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No photos yet</Text>
           </View>
         }
+        style={Platform.OS === 'web' ? { height: '100%' } : undefined}
       />
     </SafeAreaView>
   );
