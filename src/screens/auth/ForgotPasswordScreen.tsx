@@ -1,19 +1,21 @@
+import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  Alert,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
 type ForgotPasswordScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'ForgotPassword'>;
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
+  const { theme, colors } = useTheme();
   const [email, setEmail] = useState<string>('');
   const [emailError, setEmailError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -76,8 +79,8 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -93,30 +96,31 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
             onPress={() => navigation.goBack()}
             disabled={loading}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>← Back</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Forgot Password</Text>
-            <Text style={styles.subtitle}>
+            <Text style={[styles.title, { color: colors.text }]}>Forgot Password</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
               We'll send you a reset link to your email
             </Text>
           </View>
 
           {/* Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* Email Input */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <View style={[
                 styles.inputContainer,
-                emailError ? styles.inputError : null
+                { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                emailError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
               ]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="your@email.com"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                   value={email}
                   onChangeText={handleEmailChange}
                   autoCapitalize="none"
@@ -127,7 +131,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
                 />
               </View>
               {emailError ? (
-                <Text style={styles.errorText}>{emailError}</Text>
+                <Text style={[styles.errorText, { color: colors.error }]}>{emailError}</Text>
               ) : null}
             </View>
 
@@ -136,25 +140,25 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
               onPress={handleResetPassword}
               disabled={loading}
               activeOpacity={0.9}
-              style={[styles.resetButton, loading && styles.buttonDisabled]}
+              style={[styles.resetButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
             >
               {loading ? (
-                <ActivityIndicator color="#FFF" size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
-                <Text style={styles.resetButtonText}>Reset Password</Text>
+                <Text style={[styles.resetButtonText, { color: colors.background }]}>Reset Password</Text>
               )}
             </TouchableOpacity>
 
             {/* Info Box */}
-            <View style={styles.infoBox}>
-              <Text style={styles.infoText}>
+            <View style={[styles.infoBox, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border }]}>
+              <Text style={[styles.infoText, { color: colors.textSecondary }]}>
                 Click the link in your email to set a new password
               </Text>
             </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 40,
   },
   backButton: {

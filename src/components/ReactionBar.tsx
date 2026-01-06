@@ -1,6 +1,8 @@
 import React from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
+import { useTheme } from '../contexts/ThemeContext';
+
 interface ReactionBarProps {
   reactions?: { [userId: string]: string };
   currentUserId: string;
@@ -12,6 +14,7 @@ const ReactionBar: React.FC<ReactionBarProps> = ({
   currentUserId,
   onPress,
 }) => {
+  const { colors, theme } = useTheme();
   // Emoji'leri grupla ve say
   const emojiCounts: { [emoji: string]: { count: number; userIds: string[] } } = {};
   
@@ -44,14 +47,22 @@ const ReactionBar: React.FC<ReactionBarProps> = ({
                 key={emoji}
                 style={[
                   styles.reactionItem,
-                  isUserReaction && styles.reactionItemHighlighted,
+                  { 
+                    backgroundColor: theme === 'dark' ? '#2a2a2a' : '#F5F5F5',
+                    borderColor: 'transparent'
+                  },
+                  isUserReaction && { 
+                    backgroundColor: theme === 'dark' ? '#3a2a1a' : '#FFF9F0',
+                    borderColor: colors.primary
+                  },
                 ]}
               >
                 <Text style={styles.emoji}>{emoji}</Text>
                 <Text
                   style={[
                     styles.count,
-                    isUserReaction && styles.countHighlighted,
+                    { color: colors.textSecondary },
+                    isUserReaction && { color: colors.primary },
                   ]}
                 >
                   {data.count}
@@ -62,7 +73,7 @@ const ReactionBar: React.FC<ReactionBarProps> = ({
         </ScrollView>
       ) : (
         <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>😊 Reaksiyon ekle</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>😊 Reaksiyon ekle</Text>
         </View>
       )}
     </TouchableOpacity>

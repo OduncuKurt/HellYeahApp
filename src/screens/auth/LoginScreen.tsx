@@ -1,19 +1,21 @@
+import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
 type LoginScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Login'>;
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export default function LoginScreen({ navigation }: Props) {
+  const { theme, colors } = useTheme();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -80,8 +83,8 @@ export default function LoginScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -93,23 +96,24 @@ export default function LoginScreen({ navigation }: Props) {
         >
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Hell Yeah</Text>
-            <Text style={styles.subtitle}>Welcome back</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Hell Yeah</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Welcome back</Text>
           </View>
 
           {/* Form Card */}
-          <View style={styles.formCard}>
+          <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
             {/* Email Input */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Email</Text>
               <View style={[
                 styles.inputContainer,
-                emailError ? styles.inputError : null
+                { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                emailError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
               ]}>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { color: colors.text }]}
                   placeholder="your@email.com"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                   value={email}
                   onChangeText={handleEmailChange}
                   autoCapitalize="none"
@@ -119,21 +123,22 @@ export default function LoginScreen({ navigation }: Props) {
                 />
               </View>
               {emailError ? (
-                <Text style={styles.errorText}>{emailError}</Text>
+                <Text style={[styles.errorText, { color: colors.error }]}>{emailError}</Text>
               ) : null}
             </View>
 
             {/* Password Input */}
             <View style={styles.inputWrapper}>
-              <Text style={styles.label}>Password</Text>
+              <Text style={[styles.label, { color: colors.text }]}>Password</Text>
               <View style={[
                 styles.inputContainer,
-                passwordError ? styles.inputError : null
+                { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                passwordError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
               ]}>
                 <TextInput
-                  style={[styles.input, styles.inputWithIcon]}
+                  style={[styles.input, styles.inputWithIcon, { color: colors.text }]}
                   placeholder="••••••••"
-                  placeholderTextColor="#999"
+                  placeholderTextColor={colors.textSecondary}
                   value={password}
                   onChangeText={handlePasswordChange}
                   secureTextEntry={!showPassword}
@@ -145,13 +150,13 @@ export default function LoginScreen({ navigation }: Props) {
                   style={styles.eyeIcon}
                   activeOpacity={0.7}
                 >
-                  <Text style={styles.eyeIconText}>
+                  <Text style={[styles.eyeIconText, { color: colors.textSecondary }]}>
                     {showPassword ? 'Hide' : 'Show'}
                   </Text>
                 </TouchableOpacity>
               </View>
               {passwordError ? (
-                <Text style={styles.errorText}>{passwordError}</Text>
+                <Text style={[styles.errorText, { color: colors.error }]}>{passwordError}</Text>
               ) : null}
             </View>
 
@@ -161,7 +166,7 @@ export default function LoginScreen({ navigation }: Props) {
               onPress={() => navigation.navigate('ForgotPassword')}
               disabled={loading}
             >
-              <Text style={styles.forgotPasswordText}>Forgot password?</Text>
+              <Text style={[styles.forgotPasswordText, { color: colors.textSecondary }]}>Forgot password?</Text>
             </TouchableOpacity>
 
             {/* Login Button */}
@@ -169,35 +174,35 @@ export default function LoginScreen({ navigation }: Props) {
               onPress={handleLogin}
               disabled={loading}
               activeOpacity={0.9}
-              style={[styles.loginButton, loading && styles.buttonDisabled]}
+              style={[styles.loginButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
             >
               {loading ? (
-                <ActivityIndicator color="#FFF" size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
-                <Text style={styles.loginButtonText}>Log In</Text>
+                <Text style={[styles.loginButtonText, { color: colors.background }]}>Log In</Text>
               )}
             </TouchableOpacity>
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
-              <View style={styles.dividerLine} />
-              <Text style={styles.dividerText}>or</Text>
-              <View style={styles.dividerLine} />
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
+              <Text style={[styles.dividerText, { color: colors.textSecondary }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.border }]} />
             </View>
 
             {/* Register Button */}
             <TouchableOpacity
-              style={styles.secondaryButton}
+              style={[styles.secondaryButton, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border }]}
               onPress={() => navigation.navigate('Register')}
               disabled={loading}
               activeOpacity={0.8}
             >
-              <Text style={styles.secondaryButtonText}>Create Account</Text>
+              <Text style={[styles.secondaryButtonText, { color: colors.text }]}>Create Account</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -212,7 +217,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingVertical: 60,
+    paddingVertical: 12,
   },
   header: {
     alignItems: 'center',

@@ -1,22 +1,24 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  Image,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { RouteProp } from '@react-navigation/native';
-import { useAuth } from '../../contexts/AuthContext';
-import { getUserBeers } from '../../services/beerService';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
 import { ref as dbRef, get } from 'firebase/database';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { database } from '../../config/firebase';
-import { User, Beer, MainStackParamList } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { getUserBeers } from '../../services/beerService';
+import { Beer, MainStackParamList, User } from '../../types';
 
 type ProfileScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Profile'>;
 type ProfileScreenRouteProp = RouteProp<MainStackParamList, 'Profile'>;
@@ -28,6 +30,7 @@ interface Props {
 
 export default function ProfileScreen({ navigation, route }: Props) {
   const { user: currentUser, logout } = useAuth();
+  const { colors, theme, toggleTheme } = useTheme();
   const userId = route.params?.userId || currentUser?.uid;
   const isOwnProfile = userId === currentUser?.uid;
 
@@ -77,6 +80,10 @@ export default function ProfileScreen({ navigation, route }: Props) {
     ]);
   };
 
+  const isGuinness = (beer: Beer): boolean => {
+    return beer.isGuinness === true;
+  };
+
   const renderBeerItem = ({ item }: { item: Beer }) => (
     <TouchableOpacity
       style={styles.beerPhoto}
@@ -84,44 +91,49 @@ export default function ProfileScreen({ navigation, route }: Props) {
       activeOpacity={0.9}
     >
       <Image source={{ uri: item.photoUrl }} style={styles.beerImage} />
+      {isGuinness(item) && (
+        <View style={[styles.guinnessIndicator, { backgroundColor: theme === 'dark' ? '#1C1C1E' : '#FFFFFF' }]}>
+          <Text style={{ fontSize: 14 }}>🍀</Text>
+        </View>
+      )}
     </TouchableOpacity>
   );
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!profileUser) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>User not found</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>User not found</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
+          <Text style={[styles.backBtnText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Profile</Text>
         {isOwnProfile && (
           <TouchableOpacity onPress={handleLogout} style={styles.logoutBtn}>
-            <Text style={styles.logoutText}>Logout</Text>
+            <Text style={[styles.logoutText, { color: colors.error }]}>Logout</Text>
           </TouchableOpacity>
         )}
         {!isOwnProfile && <View style={styles.backBtn} />}
@@ -131,37 +143,56 @@ export default function ProfileScreen({ navigation, route }: Props) {
         ListHeaderComponent={
           <View>
             {/* Profile Info */}
-            <View style={styles.profileInfo}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{profileUser.displayName.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.profileInfo, { backgroundColor: colors.card }]}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{profileUser.displayName.charAt(0).toUpperCase()}</Text>
               </View>
-              <Text style={styles.displayName}>{profileUser.displayName}</Text>
-              <Text style={styles.username}>@{profileUser.username}</Text>
+              <Text style={[styles.displayName, { color: colors.text }]}>{profileUser.displayName}</Text>
+              <Text style={[styles.username, { color: colors.textSecondary }]}>@{profileUser.username}</Text>
+
+              {isOwnProfile && (
+                <TouchableOpacity
+                  style={[styles.themeToggle, { backgroundColor: theme === 'dark' ? '#333' : '#f0f0f0' }]}
+                  onPress={toggleTheme}
+                >
+                  <Text style={[styles.themeToggleText, { color: colors.text }]}>
+                    {theme === 'dark' ? '☀️ Light Mode' : '🌙 Dark Mode'}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
               {/* Stats */}
-              <View style={styles.stats}>
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{profileUser.totalBeers || 0}</Text>
-                  <Text style={styles.statLabel}>Total Beers</Text>
+                <View style={[styles.stats, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border }]}>
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.text }]}>{profileUser.totalBeers || 0}</Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Total Beers</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  
+                  {/* NEW: Guinness Stat */}
+                  <View style={styles.statItem}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, justifyContent: 'center' }}>
+                      <Text style={[styles.statNumber, { color: colors.text }]}>
+                        {profileUser.totalGuinnessBeers || 0}
+                      </Text>
+                      <Text style={{ fontSize: 16 }}>🍀</Text>
+                    </View>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Guinness</Text>
+                  </View>
+                  <View style={[styles.statDivider, { backgroundColor: colors.border }]} />
+                  
+                  <View style={styles.statItem}>
+                    <Text style={[styles.statNumber, { color: colors.text }]}>
+                      {Object.keys(profileUser.friends || {}).length}
+                    </Text>
+                    <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Friends</Text>
+                  </View>
                 </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>
-                    {Object.keys(profileUser.friends || {}).length}
-                  </Text>
-                  <Text style={styles.statLabel}>Friends</Text>
-                </View>
-                <View style={styles.statDivider} />
-                <View style={styles.statItem}>
-                  <Text style={styles.statNumber}>{beers.length}</Text>
-                  <Text style={styles.statLabel}>Photos</Text>
-                </View>
-              </View>
             </View>
 
             {/* Photos Header */}
-            <View style={styles.photosHeader}>
-              <Text style={styles.photosTitle}>Photos</Text>
+            <View style={[styles.photosHeader, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
+              <Text style={[styles.photosTitle, { color: colors.text }]}>Photos</Text>
             </View>
           </View>
         }
@@ -174,11 +205,11 @@ export default function ProfileScreen({ navigation, route }: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyPhotos}>
-            <Text style={styles.emptyText}>No photos yet</Text>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No photos yet</Text>
           </View>
         }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -197,7 +228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 0.5,
@@ -254,7 +285,17 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 15,
     color: '#999',
-    marginBottom: 30,
+    marginBottom: 20,
+  },
+  themeToggle: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  themeToggleText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
   stats: {
     flexDirection: 'row',
@@ -316,6 +357,22 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: '#F0F0F0',
     borderRadius: 8,
+  },
+  guinnessIndicator: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   emptyState: {
     flex: 1,

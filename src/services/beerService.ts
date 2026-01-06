@@ -1,4 +1,4 @@
-import { ref as dbRef, get, increment, push, set, query, orderByChild, limitToLast } from 'firebase/database';
+import { ref as dbRef, get, increment, push, set } from 'firebase/database';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { database, storage } from '../config/firebase';
 import { Beer, Comment } from '../types';
@@ -10,7 +10,8 @@ export const addBeer = async (
   userId: string,
   userName: string,
   userAvatar: string,
-  photoUri: string
+  photoUri: string,
+  isGuinness: boolean = false
 ): Promise<{ success: boolean; beerId?: string; error?: string }> => {
   try {
     // 1. Fotoğrafı Firebase Storage'a yükle
@@ -42,6 +43,7 @@ export const addBeer = async (
       photoUrl,
       timestamp,
       year,
+      isGuinness,
       reactions: {},
       comments: [],
     };
@@ -55,6 +57,15 @@ export const addBeer = async (
     // 4. Kullanıcının yıllık bira sayısını artır
     const userYearBeersRef = dbRef(database, `users/${userId}/beersByYear/${year}`);
     await set(userYearBeersRef, increment(1));
+
+    // 5. Eğer Guinness ise, Guinness sayaçlarını artır
+    if (isGuinness) {
+      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
+      await set(userTotalGuinnessRef, increment(1));
+      
+      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
+      await set(userYearGuinnessRef, increment(1));
+    }
 
     return { success: true, beerId };
   } catch (error: any) {
@@ -80,10 +91,26 @@ export const getFriendsFeed = async (userId: string, friendIds: string[]): Promi
 
     const beers: Beer[] = Object.keys(beersData)
       .filter((beerId) => allUserIds.includes(beersData[beerId].userId))
-      .map((beerId) => ({
-        id: beerId,
-        ...beersData[beerId],
-      }));
+      .map((beerId) => {
+        const beerData = beersData[beerId];
+        
+        // Convert comments object to array if exists
+        let comments: Comment[] = [];
+        if (beerData.comments) {
+          comments = Object.keys(beerData.comments).map((commentId) => ({
+            id: commentId,
+            ...beerData.comments[commentId],
+          }));
+          comments.sort((a, b) => b.timestamp - a.timestamp);
+        }
+        
+        return {
+          id: beerId,
+          ...beerData,
+          isGuinness: beerData.isGuinness || false, // Backward compatibility
+          comments,
+        };
+      });
 
     // Zamana göre sırala (yeniden eskiye)
     return beers.sort((a, b) => b.timestamp - a.timestamp);
@@ -108,10 +135,26 @@ export const getUserBeers = async (userId: string): Promise<Beer[]> => {
     const beersData = snapshot.val();
     const beers: Beer[] = Object.keys(beersData)
       .filter((beerId) => beersData[beerId].userId === userId)
-      .map((beerId) => ({
-        id: beerId,
-        ...beersData[beerId],
-      }));
+      .map((beerId) => {
+        const beerData = beersData[beerId];
+        
+        // Convert comments object to array if exists
+        let comments: Comment[] = [];
+        if (beerData.comments) {
+          comments = Object.keys(beerData.comments).map((commentId) => ({
+            id: commentId,
+            ...beerData.comments[commentId],
+          }));
+          comments.sort((a, b) => b.timestamp - a.timestamp);
+        }
+        
+        return {
+          id: beerId,
+          ...beerData,
+          isGuinness: beerData.isGuinness || false, // Backward compatibility
+          comments,
+        };
+      });
 
     return beers.sort((a, b) => b.timestamp - a.timestamp);
   } catch (error) {
@@ -132,9 +175,24 @@ export const getBeer = async (beerId: string): Promise<Beer | null> => {
       return null;
     }
 
+    const beerData = snapshot.val();
+    
+    // Convert comments object to array if exists
+    let comments: Comment[] = [];
+    if (beerData.comments) {
+      comments = Object.keys(beerData.comments).map((commentId) => ({
+        id: commentId,
+        ...beerData.comments[commentId],
+      }));
+      // Sort by timestamp (newest first)
+      comments.sort((a, b) => b.timestamp - a.timestamp);
+    }
+
     return {
       id: beerId,
-      ...snapshot.val(),
+      ...beerData,
+      isGuinness: beerData.isGuinness || false, // Backward compatibility
+      comments,
     };
   } catch (error) {
     console.error('Get beer error:', error);
@@ -179,6 +237,62 @@ export const deleteBeer = async (
     return { success: false, error: error.message };
   }
 };
+
+/**
+ * Biranın Guinness bayrağını toggle eder (sadece sahip)
+ */
+export const toggleGuinness = async (
+  beerId: string,
+  userId: string
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    // 1. Bira sahibini kontrol et
+    const beerRef = dbRef(database, `beers/${beerId}`);
+    const snapshot = await get(beerRef);
+
+    if (!snapshot.exists()) {
+      return { success: false, error: 'Bira bulunamadı.' };
+    }
+
+    const beerData = snapshot.val();
+    if (beerData.userId !== userId) {
+      return { success: false, error: 'Sadece kendi biranın Guinness bayrağını değiştirebilirsin.' };
+    }
+
+    // 2. Mevcut durumu al ve toggle et
+    const currentIsGuinness = beerData.isGuinness || false;
+    const newIsGuinness = !currentIsGuinness;
+
+    // 3. Bira bayrağını güncelle
+    await set(dbRef(database, `beers/${beerId}/isGuinness`), newIsGuinness);
+
+    // 4. Kullanıcı sayaçlarını güncelle
+    const year = beerData.year;
+    
+    if (newIsGuinness) {
+      // Guinness olarak işaretlendi - artır
+      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
+      await set(userTotalGuinnessRef, increment(1));
+      
+      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
+      await set(userYearGuinnessRef, increment(1));
+    } else {
+      // Guinness işareti kaldırıldı - azalt
+      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
+      await set(userTotalGuinnessRef, increment(-1));
+      
+      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
+      await set(userYearGuinnessRef, increment(-1));
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Toggle Guinness error:', error);
+    return { success: false, error: error.message };
+  }
+};
+
+
 
 /**
  * Biraya emoji reaksiyonu ekler veya günceller

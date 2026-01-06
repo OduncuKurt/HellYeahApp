@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 import { Comment } from '../types';
 
 interface CommentSectionProps {
@@ -25,6 +26,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   onAddComment,
   onDeleteComment,
 }) => {
+  const { colors, theme } = useTheme();
   const [commentText, setCommentText] = useState('');
   const [expanded, setExpanded] = useState(false);
 
@@ -82,21 +84,21 @@ const CommentSection: React.FC<CommentSectionProps> = ({
           {displayedComments.map((comment) => (
             <View key={comment.id} style={styles.commentItem}>
               <Text style={styles.avatar}>{comment.userAvatar}</Text>
-              <View style={styles.commentContent}>
+              <View style={[styles.commentContent, { backgroundColor: theme === 'dark' ? '#2a2a2a' : '#F5F5F5' }]}>
                 <View style={styles.commentHeader}>
-                  <Text style={styles.userName}>{comment.userName}</Text>
-                  <Text style={styles.timestamp}>
+                  <Text style={[styles.userName, { color: colors.text }]}>{comment.userName}</Text>
+                  <Text style={[styles.timestamp, { color: colors.textSecondary }]}>
                     {formatTimestamp(comment.timestamp)}
                   </Text>
                 </View>
-                <Text style={styles.commentText}>{comment.text}</Text>
+                <Text style={[styles.commentText, { color: colors.textSecondary }]}>{comment.text}</Text>
               </View>
               {comment.userId === currentUserId && (
                 <TouchableOpacity
-                  style={styles.deleteButton}
+                  style={[styles.deleteButton, { backgroundColor: colors.error }]}
                   onPress={() => handleDeleteComment(comment.id)}
                 >
-                  <Text style={styles.deleteButtonText}>×</Text>
+                  <Text style={[styles.deleteButtonText, { color: colors.background }]}>×</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -107,7 +109,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               style={styles.viewAllButton}
               onPress={() => setExpanded(true)}
             >
-              <Text style={styles.viewAllText}>
+              <Text style={[styles.viewAllText, { color: colors.textSecondary }]}>
                 Tüm {sortedComments.length} yorumu görüntüle
               </Text>
             </TouchableOpacity>
@@ -118,19 +120,19 @@ const CommentSection: React.FC<CommentSectionProps> = ({
               style={styles.viewAllButton}
               onPress={() => setExpanded(false)}
             >
-              <Text style={styles.viewAllText}>Daha az göster</Text>
+              <Text style={[styles.viewAllText, { color: colors.textSecondary }]}>Daha az göster</Text>
             </TouchableOpacity>
           )}
         </View>
       )}
 
       {/* Yorum Input */}
-      <View style={styles.inputContainer}>
+      <View style={[styles.inputContainer, { backgroundColor: theme === 'dark' ? '#2a2a2a' : '#F5F5F5' }]}>
         <Text style={styles.inputAvatar}>{currentUserAvatar}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: colors.text }]}
           placeholder="Yorum yaz..."
-          placeholderTextColor="#666"
+          placeholderTextColor={colors.textSecondary}
           value={commentText}
           onChangeText={setCommentText}
           multiline
@@ -139,12 +141,13 @@ const CommentSection: React.FC<CommentSectionProps> = ({
         <TouchableOpacity
           style={[
             styles.sendButton,
-            !commentText.trim() && styles.sendButtonDisabled,
+            { backgroundColor: colors.primary },
+            !commentText.trim() && { backgroundColor: theme === 'dark' ? '#4a4a4a' : '#E0E0E0' },
           ]}
           onPress={handleAddComment}
           disabled={!commentText.trim()}
         >
-          <Text style={styles.sendButtonText}>➤</Text>
+          <Text style={[styles.sendButtonText, { color: colors.background }]}>➤</Text>
         </TouchableOpacity>
       </View>
     </View>

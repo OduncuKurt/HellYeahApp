@@ -59,5 +59,6 @@
   "react-native-tools.projectRoot": "${workspaceFolder}",
 
   // Terminal
-  "terminal.integrated.defaultProfile.windows": "Command Prompt"
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+  "workbench.colorTheme": "Tokyo Night"
 }

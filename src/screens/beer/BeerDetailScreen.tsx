@@ -1,22 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-  TextInput,
-  FlatList,
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
+  FlatList,
+  Image,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View
 } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { RouteProp } from '@react-navigation/native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
-import { getBeer, addReaction, removeReaction, addComment, deleteComment } from '../../services/beerService';
+import { useTheme } from '../../contexts/ThemeContext';
+import { addComment, addReaction, deleteComment, getBeer, removeReaction, toggleGuinness } from '../../services/beerService';
 import { Beer, Comment, MainStackParamList } from '../../types';
 
 type BeerDetailScreenNavigationProp = StackNavigationProp<MainStackParamList, 'BeerDetail'>;
@@ -31,7 +31,8 @@ const REACTION_EMOJIS = ['🍻', '🔥', '👏', '❤️', '😂', '🎉'];
 
 export default function BeerDetailScreen({ navigation, route }: Props) {
   const { beerId } = route.params;
-  const { user } = useAuth();
+  const { user, refreshUserData } = useAuth();
+  const { colors, theme } = useTheme();
   const [beer, setBeer] = useState<Beer | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [commentText, setCommentText] = useState<string>('');
@@ -94,82 +95,90 @@ export default function BeerDetailScreen({ navigation, route }: Props) {
     ]);
   };
 
-  const renderComment = ({ item }: { item: Comment }) => (
-    <TouchableOpacity
-      style={styles.commentCard}
-      onLongPress={() => handleDeleteComment(item.id, item.userId)}
-      activeOpacity={0.9}
-    >
-      <View style={styles.commentAvatar}>
-        <Text style={styles.commentAvatarText}>{item.userName.charAt(0).toUpperCase()}</Text>
-      </View>
-      <View style={styles.commentContent}>
-        <Text style={styles.commentUser}>{item.userName}</Text>
-        <Text style={styles.commentText}>{item.text}</Text>
-        <Text style={styles.commentTime}>
-          {new Date(item.timestamp).toLocaleDateString('en-US', {
-            day: 'numeric',
-            month: 'short',
-            hour: '2-digit',
-            minute: '2-digit',
-          })}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+  const handleToggleGuinness = async (): Promise<void> => {
+    if (!user || !beer || beer.userId !== user.uid) return;
+
+    const currentState = beer.isGuinness ? 'Guinness' : 'normal';
+    const newState = beer.isGuinness ? 'normal' : 'Guinness';
+
+    Alert.alert(
+      'Guinness Bayrağını Değiştir',
+      `Bu birayı ${currentState} biradan ${newState} biraya çevirmek istediğine emin misin?`,
+      [
+        { text: 'İptal', style: 'cancel' },
+        {
+          text: 'Evet, Değiştir',
+          onPress: async () => {
+            const result = await toggleGuinness(beerId, user.uid);
+            if (result.success) {
+              loadBeer(); // Reload beer data
+              if (refreshUserData) await refreshUserData(); // Update stats
+            } else {
+              Alert.alert('Hata', result.error || 'İşlem başarısız oldu.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
+
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   if (!beer) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>Beer not found</Text>
+          <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Beer not found</Text>
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
+
+  const isGuinness = (beer: Beer): boolean => {
+    return beer.isGuinness === true;
+  };
 
   const userReaction = user ? beer.reactions?.[user.uid] : undefined;
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.container}
-      >
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top', 'bottom']}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-            <Text style={styles.backBtnText}>←</Text>
+            <Text style={[styles.backBtnText, { color: colors.text }]}>←</Text>
           </TouchableOpacity>
           <View style={styles.headerUser}>
-            <View style={styles.headerAvatar}>
-              <Text style={styles.headerAvatarText}>{beer.userName.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.headerAvatar, { backgroundColor: colors.primary }]}>
+              <Text style={[styles.headerAvatarText, { color: colors.background }]}>{beer.userName.charAt(0).toUpperCase()}</Text>
             </View>
-            <Text style={styles.headerName}>{beer.userName}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.headerName, { color: colors.text }]}>{beer.userName}</Text>
+              {isGuinness(beer) && <Text style={{ fontSize: 16 }}>🍀</Text>}
+            </View>
           </View>
           <View style={styles.backBtn} />
         </View>
 
         {/* Photo */}
-        <View style={styles.photoContainer}>
-          <Image source={{ uri: beer.photoUrl }} style={styles.photo} />
+        <View style={[styles.photoContainer, { backgroundColor: colors.background }]}>
+          <Image source={{ uri: beer.photoUrl }} style={[styles.photo, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F0F0F0' }]} />
         </View>
 
         {/* Reactions */}
-        <View style={styles.reactionsBar}>
+        <View style={[styles.reactionsBar, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
           {REACTION_EMOJIS.map((emoji) => {
             const count = beer.reactions
               ? Object.values(beer.reactions).filter((r) => r === emoji).length
@@ -179,55 +188,103 @@ export default function BeerDetailScreen({ navigation, route }: Props) {
             return (
               <TouchableOpacity
                 key={emoji}
-                style={[styles.reactionBtn, isActive && styles.activeReactionBtn]}
+                style={[
+                    styles.reactionBtn,
+                    { backgroundColor: isActive ? colors.primary : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }
+                ]}
                 onPress={() => handleReaction(emoji)}
               >
                 <Text style={styles.reactionEmoji}>{emoji}</Text>
-                {count > 0 && <Text style={styles.reactionCount}>{count}</Text>}
+                {count > 0 && <Text style={[styles.reactionCount, { color: isActive ? colors.background : colors.text }]}>{count}</Text>}
               </TouchableOpacity>
             );
           })}
+          
+          {/* Guinness Toggle (Only for beer owner) */}
+          {user && beer.userId === user.uid && (
+            <TouchableOpacity
+              style={[
+                styles.guinnessToggleBtn,
+                { backgroundColor: beer.isGuinness ? '#34C759' : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }
+              ]}
+              onPress={handleToggleGuinness}
+            >
+              <Text style={styles.guinnessToggleIcon}>🍀</Text>
+              <Text style={[
+                styles.guinnessToggleText,
+                { color: beer.isGuinness ? '#FFF' : colors.text }
+              ]}>
+                {beer.isGuinness ? 'Guinness' : 'Normal'}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {/* Comments */}
-        <FlatList
-          data={beer.comments || []}
-          renderItem={renderComment}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={styles.commentsContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={
-            <View style={styles.emptyComments}>
-              <Text style={styles.emptyCommentsText}>No comments yet</Text>
-            </View>
-          }
-        />
-
-        {/* Comment Input */}
-        <View style={styles.commentInputContainer}>
+        {/* Comment Input - MOVED TO TOP */}
+        <View style={[styles.commentInputContainer, { backgroundColor: colors.card, borderTopColor: colors.border, borderBottomColor: colors.border }]}>
           <TextInput
-            style={styles.commentInput}
+            style={[styles.commentInput, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', color: colors.text }]}
             placeholder="Add a comment..."
-            placeholderTextColor="#999"
+            placeholderTextColor={colors.textSecondary}
             value={commentText}
             onChangeText={setCommentText}
             multiline
             maxLength={200}
           />
           <TouchableOpacity
-            style={[styles.sendBtn, !commentText.trim() && styles.sendBtnDisabled]}
+            style={[
+              styles.sendBtn, 
+              { backgroundColor: colors.primary },
+              !commentText.trim() && { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#E0E0E0' }
+            ]}
             onPress={handleAddComment}
             disabled={!commentText.trim() || submitting}
           >
             {submitting ? (
-              <ActivityIndicator color="#FFF" size="small" />
+              <ActivityIndicator color={colors.background} size="small" />
             ) : (
-              <Text style={styles.sendBtnText}>Send</Text>
+              <Text style={[styles.sendBtnText, { color: colors.background }]}>Send</Text>
             )}
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
-    </View>
+
+        {/* Comments - INVERTED FOR KEYBOARD FIX */}
+        <FlatList
+          inverted
+          data={beer.comments || []}
+          renderItem={({ item }: { item: Comment }) => (
+            <TouchableOpacity
+              style={styles.commentCard}
+              onLongPress={() => handleDeleteComment(item.id, item.userId)}
+              activeOpacity={0.9}
+            >
+              <View style={[styles.commentAvatar, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.commentAvatarText, { color: colors.background }]}>{item.userName.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.commentContent}>
+                <Text style={[styles.commentUser, { color: colors.text }]}>{item.userName}</Text>
+                <Text style={[styles.commentText, { color: colors.textSecondary }]}>{item.text}</Text>
+                <Text style={[styles.commentTime, { color: colors.textSecondary }]}>
+                  {new Date(item.timestamp).toLocaleDateString('en-US', {
+                    day: 'numeric',
+                    month: 'short',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          )}
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={[styles.commentsContent, { backgroundColor: colors.background }]}
+          showsVerticalScrollIndicator={false}
+          ListEmptyComponent={
+            <View style={styles.emptyComments}>
+              <Text style={[styles.emptyCommentsText, { color: colors.textSecondary }]}>No comments yet</Text>
+            </View>
+          }
+        />
+    </SafeAreaView>
   );
 }
 
@@ -246,7 +303,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 0.5,
@@ -420,5 +477,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
     color: '#999',
+  },
+  guinnessToggleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 16,
+    gap: 6,
+    marginLeft: 'auto', // Push to right
+  },
+  guinnessToggleIcon: {
+    fontSize: 14,
+  },
+  guinnessToggleText: {
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

@@ -7,6 +7,7 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
+import { useTheme } from '../contexts/ThemeContext';
 
 interface EmojiPickerProps {
   visible: boolean;
@@ -23,6 +24,7 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
   onSelectEmoji,
   currentEmoji,
 }) => {
+  const { colors, theme } = useTheme();
   const scaleAnim = React.useRef(new Animated.Value(0)).current;
 
   React.useEffect(() => {
@@ -63,15 +65,22 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
             },
           ]}
         >
-          <View style={styles.content}>
-            <Text style={styles.title}>Reaksiyon Seç</Text>
+          <View style={[styles.content, { backgroundColor: colors.card }]}>
+            <Text style={[styles.title, { color: colors.text }]}>Reaksiyon Seç</Text>
             <View style={styles.emojiGrid}>
               {EMOJIS.map((emoji) => (
                 <TouchableOpacity
                   key={emoji}
                   style={[
                     styles.emojiButton,
-                    currentEmoji === emoji && styles.emojiButtonSelected,
+                    { 
+                        backgroundColor: theme === 'dark' ? '#3a3a3a' : '#F5F5F5',
+                        borderColor: 'transparent'
+                    },
+                    currentEmoji === emoji && {
+                        borderColor: colors.primary,
+                        backgroundColor: theme === 'dark' ? '#4a3a2a' : '#FFF9F0'
+                    },
                   ]}
                   onPress={() => handleSelectEmoji(emoji)}
                 >
@@ -81,13 +90,13 @@ const EmojiPicker: React.FC<EmojiPickerProps> = ({
             </View>
             {currentEmoji && (
               <TouchableOpacity
-                style={styles.removeButton}
+                style={[styles.removeButton, { backgroundColor: colors.error }]}
                 onPress={() => {
                   onSelectEmoji('');
                   onClose();
                 }}
               >
-                <Text style={styles.removeButtonText}>Reaksiyonu Kaldır</Text>
+                <Text style={[styles.removeButtonText, { color: colors.background }]}>Reaksiyonu Kaldır</Text>
               </TouchableOpacity>
             )}
           </View>

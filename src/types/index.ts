@@ -6,7 +6,9 @@ export interface User {
   displayName: string;
   avatar: string;
   totalBeers: number;
+  totalGuinnessBeers: number; // NEW: Total Guinness beers count
   beersByYear: { [year: string]: number }; // { "2025": 12, "2026": 45 }
+  guinnessByYear: { [year: string]: number }; // NEW: Guinness count by year
   friends: { [friendUid: string]: number }; // timestamp when became friends
   createdAt: string;
 }
@@ -32,6 +34,7 @@ export interface Beer {
   photoUrl: string;
   timestamp: number;
   year: number; // 2025, 2026, etc.
+  isGuinness: boolean; // NEW: Is this a Guinness beer?
   reactions?: { [userId: string]: string }; // { "userId": "🍻" }
   comments?: Comment[];
 }

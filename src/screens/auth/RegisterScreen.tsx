@@ -1,19 +1,21 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
+import React, { useRef, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
 type RegisterScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'Register'>;
@@ -23,6 +25,7 @@ interface Props {
 }
 
 export default function RegisterScreen({ navigation }: Props) {
+  const { theme, colors } = useTheme();
   const [username, setUsername] = useState<string>('');
   const [displayName, setDisplayName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
@@ -314,8 +317,8 @@ export default function RegisterScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={styles.keyboardView}
@@ -331,29 +334,30 @@ export default function RegisterScreen({ navigation }: Props) {
             onPress={() => navigation.goBack()}
             disabled={loading}
           >
-            <Text style={styles.backButtonText}>← Back</Text>
+            <Text style={[styles.backButtonText, { color: colors.text }]}>← Back</Text>
           </TouchableOpacity>
 
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.title}>Create Account</Text>
-            <Text style={styles.subtitle}>Join us today</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Create Account</Text>
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Join us today</Text>
           </View>
 
             {/* Form Card */}
-            <View style={styles.formCard}>
+            <View style={[styles.formCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               {/* Username Input */}
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Kullanıcı Adı</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Kullanıcı Adı</Text>
                 <View style={[
                   styles.inputContainer,
-                  usernameError ? styles.inputError : null,
-                  usernameAvailable === true ? styles.inputSuccess : null
+                  { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                  usernameError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null,
+                  usernameAvailable === true ? { borderColor: '#34C759', backgroundColor: theme === 'dark' ? '#1A2A1E' : 'rgba(52, 199, 89, 0.05)' } : null
                 ]}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text }]}
                     placeholder="kullanici_adi"
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textSecondary}
                     value={username}
                     onChangeText={handleUsernameChange}
                     autoCapitalize="none"
@@ -372,25 +376,26 @@ export default function RegisterScreen({ navigation }: Props) {
                   )}
                 </View>
                 {usernameError ? (
-                  <Text style={styles.errorText}>{usernameError}</Text>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{usernameError}</Text>
                 ) : usernameAvailable === true ? (
                   <Text style={styles.successText}>Kullanılabilir</Text>
                 ) : (
-                  <Text style={styles.hintText}>3-20 karakter, harf, rakam ve _</Text>
+                  <Text style={[styles.hintText, { color: colors.textSecondary }]}>3-20 karakter, harf, rakam ve _</Text>
                 )}
               </View>
 
               {/* Name Input */}
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Ad Soyad</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Ad Soyad</Text>
                 <View style={[
                   styles.inputContainer,
-                  displayNameError ? styles.inputError : null
+                  { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                  displayNameError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
                 ]}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text }]}
                     placeholder="Adın Soyadın"
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textSecondary}
                     value={displayName}
                     onChangeText={handleDisplayNameChange}
                     autoCapitalize="words"
@@ -398,21 +403,22 @@ export default function RegisterScreen({ navigation }: Props) {
                   />
                 </View>
                 {displayNameError ? (
-                  <Text style={styles.errorText}>{displayNameError}</Text>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{displayNameError}</Text>
                 ) : null}
               </View>
 
               {/* Email Input */}
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>E-posta</Text>
+                <Text style={[styles.label, { color: colors.text }]}>E-posta</Text>
                 <View style={[
                   styles.inputContainer,
-                  emailError ? styles.inputError : null
+                  { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                  emailError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
                 ]}>
                   <TextInput
-                    style={styles.input}
+                    style={[styles.input, { color: colors.text }]}
                     placeholder="ornek@email.com"
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textSecondary}
                     value={email}
                     onChangeText={handleEmailChange}
                     autoCapitalize="none"
@@ -422,21 +428,22 @@ export default function RegisterScreen({ navigation }: Props) {
                   />
                 </View>
                 {emailError ? (
-                  <Text style={styles.errorText}>{emailError}</Text>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{emailError}</Text>
                 ) : null}
               </View>
 
               {/* Password Input */}
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Şifre</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Şifre</Text>
                 <View style={[
                   styles.inputContainer,
-                  passwordError ? styles.inputError : null
+                  { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                  passwordError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
                 ]}>
                   <TextInput
-                    style={[styles.input, styles.inputWithIcon]}
+                    style={[styles.input, styles.inputWithIcon, { color: colors.text }]}
                     placeholder="••••••••"
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textSecondary}
                     value={password}
                     onChangeText={handlePasswordChange}
                     secureTextEntry={!showPassword}
@@ -454,23 +461,26 @@ export default function RegisterScreen({ navigation }: Props) {
                   </TouchableOpacity>
                 </View>
                 {passwordError ? (
-                  <Text style={styles.errorText}>{passwordError}</Text>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{passwordError}</Text>
                 ) : passwordStrength ? (
                   <View style={styles.strengthContainer}>
                     <View style={styles.strengthBars}>
                       <View style={[
                         styles.strengthBar,
+                        { backgroundColor: colors.border },
                         passwordStrength === 'weak' && styles.strengthWeak,
                         passwordStrength === 'medium' && styles.strengthMedium,
                         passwordStrength === 'strong' && styles.strengthStrong,
                       ]} />
                       <View style={[
                         styles.strengthBar,
+                        { backgroundColor: colors.border },
                         (passwordStrength === 'medium' || passwordStrength === 'strong') && styles.strengthMedium,
                         passwordStrength === 'strong' && styles.strengthStrong,
                       ]} />
                       <View style={[
                         styles.strengthBar,
+                        { backgroundColor: colors.border },
                         passwordStrength === 'strong' && styles.strengthStrong,
                       ]} />
                     </View>
@@ -490,15 +500,16 @@ export default function RegisterScreen({ navigation }: Props) {
 
               {/* Confirm Password Input */}
               <View style={styles.inputWrapper}>
-                <Text style={styles.label}>Şifre Tekrar</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Şifre Tekrar</Text>
                 <View style={[
                   styles.inputContainer,
-                  confirmPasswordError ? styles.inputError : null
+                  { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5', borderColor: colors.border },
+                  confirmPasswordError ? { borderColor: colors.error, backgroundColor: theme === 'dark' ? '#3A2020' : 'rgba(255, 59, 48, 0.05)' } : null
                 ]}>
                   <TextInput
-                    style={[styles.input, styles.inputWithIcon]}
+                    style={[styles.input, styles.inputWithIcon, { color: colors.text }]}
                     placeholder="••••••••"
-                    placeholderTextColor="#666"
+                    placeholderTextColor={colors.textSecondary}
                     value={confirmPassword}
                     onChangeText={handleConfirmPasswordChange}
                     secureTextEntry={!showConfirmPassword}
@@ -515,7 +526,7 @@ export default function RegisterScreen({ navigation }: Props) {
                   </TouchableOpacity>
                 </View>
                 {confirmPasswordError ? (
-                  <Text style={styles.errorText}>{confirmPasswordError}</Text>
+                  <Text style={[styles.errorText, { color: colors.error }]}>{confirmPasswordError}</Text>
                 ) : null}
               </View>
 
@@ -524,12 +535,12 @@ export default function RegisterScreen({ navigation }: Props) {
                 onPress={handleRegister}
                 disabled={loading}
                 activeOpacity={0.9}
-                style={[styles.registerButton, loading && styles.buttonDisabled]}
+                style={[styles.registerButton, { backgroundColor: colors.primary }, loading && styles.buttonDisabled]}
               >
                 {loading ? (
-                  <ActivityIndicator color="#FFF" size="small" />
+                  <ActivityIndicator color={colors.background} size="small" />
                 ) : (
-                  <Text style={styles.registerButtonText}>Create Account</Text>
+                  <Text style={[styles.registerButtonText, { color: colors.background }]}>Create Account</Text>
                 )}
               </TouchableOpacity>
 
@@ -539,15 +550,15 @@ export default function RegisterScreen({ navigation }: Props) {
                 onPress={() => navigation.goBack()}
                 disabled={loading}
               >
-                <Text style={styles.loginLinkText}>
+                <Text style={[styles.loginLinkText, { color: colors.textSecondary }]}>
                   Already have an account?{' '}
-                  <Text style={styles.loginLinkBold}>Log In</Text>
+                  <Text style={[styles.loginLinkBold, { color: colors.text }]}>Log In</Text>
                 </Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
         </KeyboardAvoidingView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -562,7 +573,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 40,
   },
   backButton: {

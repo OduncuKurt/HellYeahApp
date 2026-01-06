@@ -1,17 +1,17 @@
-import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged,
-  updateProfile,
-  sendPasswordResetEmail,
-  User as FirebaseUser,
+    createUserWithEmailAndPassword,
+    User as FirebaseUser,
+    onAuthStateChanged,
+    sendPasswordResetEmail,
+    signInWithEmailAndPassword,
+    signOut,
+    updateProfile,
 } from 'firebase/auth';
-import { ref, set, get } from 'firebase/database';
+import { get, ref, set } from 'firebase/database';
+import React, { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { auth, database } from '../config/firebase';
-import { User, AuthContextType, AuthResult } from '../types';
+import { AuthContextType, AuthResult, User } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -45,7 +45,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           displayName: firebaseUser.displayName || userData?.displayName || '',
           avatar: userData?.avatar || '🍺',
           totalBeers: userData?.totalBeers || 0,
+          totalGuinnessBeers: userData?.totalGuinnessBeers || 0, // NEW
           beersByYear: userData?.beersByYear || {},
+          guinnessByYear: userData?.guinnessByYear || {}, // NEW
           friends: userData?.friends || {},
           createdAt: userData?.createdAt || new Date().toISOString(),
         });
@@ -119,7 +121,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         displayName,
         avatar: '🍺', // Default avatar
         totalBeers: 0,
+        totalGuinnessBeers: 0, // NEW
         beersByYear: {},
+        guinnessByYear: {}, // NEW
         friends: {},
         createdAt: new Date().toISOString(),
       };
@@ -128,7 +132,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       // State'i güncelle
       setUser({
         uid,
-        email,
+        email, // Email from Firebase Auth
         ...userData,
       });
 

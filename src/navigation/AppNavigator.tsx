@@ -1,34 +1,37 @@
-import React from 'react';
-import { NavigationContainer, LinkingOptions } from '@react-navigation/native';
+import { LinkingOptions, NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
 import * as Linking from 'expo-linking';
+import React from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 
+import { DarkTheme, DefaultTheme } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { AuthStackParamList, MainStackParamList } from '../types';
 
 // Auth Screens
+import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
-import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 
 // Main Screens
+import BeerDetailScreen from '../screens/beer/BeerDetailScreen';
 import FeedScreen from '../screens/feed/FeedScreen';
 import FriendsScreen from '../screens/friends/FriendsScreen';
 import LeaderboardScreen from '../screens/leaderboard/LeaderboardScreen';
 import ProfileScreen from '../screens/profile/ProfileScreen';
-import BeerDetailScreen from '../screens/beer/BeerDetailScreen';
 
 const AuthStack = createStackNavigator<AuthStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
 
 // Auth Stack - Giriş yapmamış kullanıcılar için
 function AuthStackNavigator() {
+  const { colors } = useTheme();
   return (
     <AuthStack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#1a1a1a' },
+        cardStyle: { backgroundColor: colors.background },
       }}
     >
       <AuthStack.Screen name="Login" component={LoginScreen} />
@@ -40,11 +43,12 @@ function AuthStackNavigator() {
 
 // Main Stack - Giriş yapmış kullanıcılar için
 function MainStackNavigator() {
+  const { colors } = useTheme();
   return (
     <MainStack.Navigator
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#1a1a1a' },
+        cardStyle: { backgroundColor: colors.background },
       }}
     >
       <MainStack.Screen name="Feed" component={FeedScreen} />
@@ -73,18 +77,21 @@ const linking: LinkingOptions<any> = {
 // Ana Navigator
 export default function AppNavigator() {
   const { user, initializing } = useAuth();
+  const { theme, colors } = useTheme();
 
   // İlk yüklenme sırasında loading göster
   if (initializing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#FF9500" />
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.primary} />
       </View>
     );
   }
 
+  const navigationTheme = theme === 'dark' ? DarkTheme : DefaultTheme;
+
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} theme={navigationTheme}>
       {user ? <MainStackNavigator /> : <AuthStackNavigator />}
     </NavigationContainer>
   );
@@ -95,6 +102,5 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#1a1a1a',
   },
 });

@@ -1,21 +1,23 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  RefreshControl,
-  ActivityIndicator,
-  Image,
-  Alert,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { StackNavigationProp } from '@react-navigation/stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImagePicker from 'expo-image-picker';
+import { StatusBar } from 'expo-status-bar';
+import React, { useCallback, useState } from 'react';
+import {
+  ActivityIndicator,
+  Alert,
+  FlatList,
+  Image,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
-import { getFriendsFeed, addBeer } from '../../services/beerService';
+import { useTheme } from '../../contexts/ThemeContext';
+import { addBeer, getFriendsFeed } from '../../services/beerService';
 import { getFriends } from '../../services/friendService';
 import { Beer, MainStackParamList } from '../../types';
 
@@ -26,7 +28,8 @@ interface Props {
 }
 
 export default function FeedScreen({ navigation }: Props) {
-  const { user, logout } = useAuth();
+  const { user, refreshUserData } = useAuth();
+  const { colors, theme } = useTheme();
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -76,25 +79,48 @@ export default function FeedScreen({ navigation }: Props) {
       });
 
       if (!result.canceled && result.assets[0]) {
-        setUploading(true);
-        const addResult = await addBeer(
-          user.uid,
-          user.displayName,
-          user.avatar,
-          result.assets[0].uri
+        // Show Guinness selection dialog
+        Alert.alert(
+          'Bira Türü',
+          'Bu bir Guinness birası mı?',
+          [
+            {
+              text: 'Hayır',
+              onPress: () => uploadBeer(result.assets[0].uri, false),
+              style: 'cancel',
+            },
+            {
+              text: '🍀 Evet, Guinness',
+              onPress: () => uploadBeer(result.assets[0].uri, true),
+            },
+          ],
+          { cancelable: false }
         );
-        setUploading(false);
-
-        if (addResult.success) {
-          loadFeed();
-        } else {
-          Alert.alert('Hata', addResult.error || 'Bira eklenemedi.');
-        }
       }
     } catch (error) {
       console.error('Add beer error:', error);
       Alert.alert('Hata', 'Fotoğraf çekilemedi.');
-      setUploading(false);
+    }
+  };
+
+  const uploadBeer = async (photoUri: string, isGuinness: boolean): Promise<void> => {
+    if (!user) return;
+    
+    setUploading(true);
+    const addResult = await addBeer(
+      user.uid,
+      user.displayName,
+      user.avatar,
+      photoUri,
+      isGuinness
+    );
+    setUploading(false);
+
+    if (addResult.success) {
+      loadFeed();
+      await refreshUserData(); // Refresh to update stats
+    } else {
+      Alert.alert('Hata', addResult.error || 'Bira eklenemedi.');
     }
   };
 
@@ -110,36 +136,43 @@ export default function FeedScreen({ navigation }: Props) {
     return `${days}g`;
   };
 
+  const isGuinness = (beer: Beer): boolean => {
+    return beer.isGuinness === true;
+  };
+
   const renderBeerItem = ({ item }: { item: Beer }) => (
     <TouchableOpacity
-      style={styles.beerCard}
+      style={[styles.beerCard, { backgroundColor: colors.card }]}
       onPress={() => navigation.navigate('BeerDetail', { beerId: item.id })}
       activeOpacity={0.98}
     >
       <View style={styles.cardHeader}>
         <View style={styles.userInfo}>
-          <View style={styles.avatarCircle}>
-            <Text style={styles.avatarText}>{item.userName.charAt(0).toUpperCase()}</Text>
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.avatarText, { color: colors.background }]}>{item.userName.charAt(0).toUpperCase()}</Text>
           </View>
           <View>
-            <Text style={styles.userName}>{item.userName}</Text>
-            <Text style={styles.timestamp}>{formatTime(item.timestamp)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.userName, { color: colors.text }]}>{item.userName}</Text>
+              {isGuinness(item) && <Text style={{ fontSize: 16 }}>🍀</Text>}
+            </View>
+            <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{formatTime(item.timestamp)}</Text>
           </View>
         </View>
       </View>
 
-      <View style={styles.beerPhoto}>
+      <View style={[styles.beerPhoto, { backgroundColor: colors.border }]}>
         <Image source={{ uri: item.photoUrl }} style={styles.beerPhotoImage} />
       </View>
 
       <View style={styles.cardFooter}>
         {item.reactions && Object.keys(item.reactions).length > 0 && (
-          <Text style={styles.reactionsText}>
+          <Text style={[styles.reactionsText, { color: colors.text }]}>
             {Object.keys(item.reactions).length} reactions
           </Text>
         )}
         {item.comments && item.comments.length > 0 && (
-          <Text style={styles.commentsText}>
+          <Text style={[styles.commentsText, { color: colors.textSecondary }]}>
             {item.comments.length} {item.comments.length === 1 ? 'comment' : 'comments'}
           </Text>
         )}
@@ -149,9 +182,9 @@ export default function FeedScreen({ navigation }: Props) {
 
   const renderEmptyState = () => (
     <View style={styles.emptyState}>
-      <View style={styles.emptyIcon} />
-      <Text style={styles.emptyTitle}>No beers yet</Text>
-      <Text style={styles.emptySubtext}>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.border }]} />
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No beers yet</Text>
+      <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>
         Add your first beer or connect with friends
       </Text>
     </View>
@@ -159,31 +192,31 @@ export default function FeedScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Hell Yeah</Text>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Hell Yeah</Text>
         <View style={styles.headerButtons}>
           <TouchableOpacity onPress={() => navigation.navigate('Friends')} style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>Friends</Text>
+            <Text style={[styles.headerBtnText, { color: colors.textSecondary }]}>Friends</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Leaderboard')} style={styles.headerBtn}>
-            <Text style={styles.headerBtnText}>Board</Text>
+            <Text style={[styles.headerBtnText, { color: colors.textSecondary }]}>Board</Text>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => navigation.navigate('Profile', {})} style={styles.profileBtn}>
-            <Text style={styles.profileBtnText}>{user?.displayName.charAt(0).toUpperCase()}</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile', {})} style={[styles.profileBtn, { backgroundColor: colors.primary }]}>
+            <Text style={[styles.profileBtnText, { color: colors.background }]}>{user?.displayName.charAt(0).toUpperCase()}</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -197,24 +230,24 @@ export default function FeedScreen({ navigation }: Props) {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={renderEmptyState}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor="#000" />
+          <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
       />
 
       {/* Add Button */}
       <TouchableOpacity
-        style={styles.addButton}
+        style={[styles.addButton, { backgroundColor: colors.primary, shadowColor: colors.text }]}
         onPress={handleAddBeer}
         disabled={uploading}
         activeOpacity={0.8}
       >
         {uploading ? (
-          <ActivityIndicator color="#FFF" size="small" />
+          <ActivityIndicator color={colors.background} size="small" />
         ) : (
-          <Text style={styles.addButtonText}>+</Text>
+          <Text style={[styles.addButtonText, { color: colors.background }]}>+</Text>
         )}
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -233,7 +266,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 0.5,

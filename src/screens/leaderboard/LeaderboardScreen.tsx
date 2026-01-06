@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  FlatList,
-  TouchableOpacity,
-  ActivityIndicator,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    FlatList,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 import { getFriends } from '../../services/friendService';
-import { User, MainStackParamList } from '../../types';
+import { MainStackParamList, User } from '../../types';
 
 type LeaderboardScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Leaderboard'>;
 
@@ -27,6 +29,7 @@ interface LeaderboardEntry {
 
 export default function LeaderboardScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const { colors, theme } = useTheme();
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -119,38 +122,41 @@ export default function LeaderboardScreen({ navigation }: Props) {
 
   if (loading) {
     return (
-      <View style={styles.container}>
-        <StatusBar style="dark" />
+      <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+        <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#000" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
+          <Text style={[styles.backBtnText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Leaderboard</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Leaderboard</Text>
         <View style={styles.backBtn} />
       </View>
 
       {/* Year Selector */}
-      <View style={styles.yearSelector}>
+      <View style={[styles.yearSelector, { backgroundColor: colors.card }]}>
         {availableYears.map((year) => (
           <TouchableOpacity
             key={year}
-            style={[styles.yearBtn, selectedYear === year && styles.activeYearBtn]}
+            style={[styles.yearBtn, { backgroundColor: selectedYear === year ? colors.primary : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }]}
             onPress={() => setSelectedYear(year)}
           >
             <Text
-              style={[styles.yearText, selectedYear === year && styles.activeYearText]}
+              style={[
+                styles.yearText,
+                { color: selectedYear === year ? colors.background : colors.textSecondary }
+              ]}
             >
               {year}
             </Text>
@@ -161,13 +167,50 @@ export default function LeaderboardScreen({ navigation }: Props) {
       {/* Leaderboard */}
       <FlatList
         data={leaderboard}
-        renderItem={renderLeaderboardItem}
+        renderItem={({ item }) => {
+            const isCurrentUser = item.user.uid === user?.uid;
+            return (
+              <TouchableOpacity
+                style={[
+                  styles.leaderboardCard,
+                  { backgroundColor: colors.card, borderColor: isCurrentUser ? colors.primary : colors.border }
+                ]}
+                onPress={() => navigation.navigate('Profile', { userId: item.user.uid })}
+                activeOpacity={0.8}
+              >
+                <View style={styles.rankContainer}>
+                  <Text style={[styles.rankText, { color: item.rank <= 3 ? colors.text : colors.textSecondary }]}>
+                    {getRankDisplay(item.rank)}
+                  </Text>
+                </View>
+                <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.avatarText, { color: colors.background }]}>{item.user.displayName.charAt(0).toUpperCase()}</Text>
+                </View>
+                <View style={styles.userInfo}>
+                  <Text style={[styles.userName, { color: colors.text }]}>
+                    {item.user.displayName}
+                    {isCurrentUser && ' (You)'}
+                  </Text>
+                  <Text style={[styles.username, { color: colors.textSecondary }]}>@{item.user.username}</Text>
+                </View>
+                <View style={styles.beerCount}>
+                  <Text style={[styles.beerNumber, { color: colors.text }]}>{item.beers}</Text>
+                  <Text style={[styles.beerLabel, { color: colors.textSecondary }]}>beers</Text>
+                </View>
+              </TouchableOpacity>
+            );
+        }}
         keyExtractor={(item) => item.user.uid}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        ListEmptyComponent={renderEmptyState}
+        ListEmptyComponent={
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No beers in {selectedYear} yet</Text>
+            <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Be the first!</Text>
+          </View>
+        }
       />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -186,7 +229,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 0.5,

@@ -1,28 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  FlatList,
-  TextInput,
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-} from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import { StackNavigationProp } from '@react-navigation/stack';
-import { useAuth } from '../../contexts/AuthContext';
+import { StatusBar } from 'expo-status-bar';
+import React, { useEffect, useState } from 'react';
 import {
-  searchUserByUsername,
-  sendFriendRequest,
-  getFriendRequests,
-  acceptFriendRequest,
-  rejectFriendRequest,
-  getFriends,
-  removeFriend,
+    ActivityIndicator,
+    Alert,
+    FlatList,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import {
+    acceptFriendRequest,
+    getFriendRequests,
+    getFriends,
+    rejectFriendRequest,
+    removeFriend,
+    searchUserByUsername,
+    sendFriendRequest,
 } from '../../services/friendService';
-import { User, FriendRequest, MainStackParamList } from '../../types';
+import { FriendRequest, MainStackParamList, User } from '../../types';
 
 type FriendsScreenNavigationProp = StackNavigationProp<MainStackParamList, 'Friends'>;
 
@@ -32,6 +34,7 @@ interface Props {
 
 export default function FriendsScreen({ navigation }: Props) {
   const { user } = useAuth();
+  const { colors, theme } = useTheme();
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -177,41 +180,41 @@ export default function FriendsScreen({ navigation }: Props) {
   );
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="dark" />
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: colors.card, borderBottomColor: colors.border }]}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Text style={styles.backBtnText}>←</Text>
+          <Text style={[styles.backBtnText, { color: colors.text }]}>←</Text>
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Friends</Text>
+        <Text style={[styles.headerTitle, { color: colors.text }]}>Friends</Text>
         <View style={styles.backBtn} />
       </View>
 
       {/* Tabs */}
-      <View style={styles.tabs}>
+      <View style={[styles.tabs, { backgroundColor: colors.card }]}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'friends' && styles.activeTab]}
+          style={[styles.tab, { backgroundColor: activeTab === 'friends' ? colors.primary : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }]}
           onPress={() => setActiveTab('friends')}
         >
-          <Text style={[styles.tabText, activeTab === 'friends' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: activeTab === 'friends' ? colors.background : colors.textSecondary }]}>
             Friends ({friends.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'requests' && styles.activeTab]}
+          style={[styles.tab, { backgroundColor: activeTab === 'requests' ? colors.primary : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }]}
           onPress={() => setActiveTab('requests')}
         >
-          <Text style={[styles.tabText, activeTab === 'requests' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: activeTab === 'requests' ? colors.background : colors.textSecondary }]}>
             Requests ({requests.length})
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'search' && styles.activeTab]}
+          style={[styles.tab, { backgroundColor: activeTab === 'search' ? colors.primary : theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }]}
           onPress={() => setActiveTab('search')}
         >
-          <Text style={[styles.tabText, activeTab === 'search' && styles.activeTabText]}>
+          <Text style={[styles.tabText, { color: activeTab === 'search' ? colors.background : colors.textSecondary }]}>
             Search
           </Text>
         </TouchableOpacity>
@@ -221,14 +224,30 @@ export default function FriendsScreen({ navigation }: Props) {
       {activeTab === 'friends' && (
         <FlatList
           data={friends}
-          renderItem={renderFriendItem}
+          renderItem={({ item }) => (
+            <TouchableOpacity
+              style={[styles.friendCard, { backgroundColor: colors.card, borderColor: colors.border }]}
+              onPress={() => navigation.navigate('Profile', { userId: item.uid })}
+              onLongPress={() => handleRemoveFriend(item.uid, item.displayName)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{item.displayName.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.friendInfo}>
+                <Text style={[styles.friendName, { color: colors.text }]}>{item.displayName}</Text>
+                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
+              </View>
+              <Text style={[styles.friendBeers, { color: colors.textSecondary }]}>{item.totalBeers || 0} beers</Text>
+            </TouchableOpacity>
+          )}
           keyExtractor={(item) => item.uid}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No friends yet</Text>
-              <Text style={styles.emptySubtext}>Search to add friends</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No friends yet</Text>
+              <Text style={[styles.emptySubtext, { color: colors.textSecondary }]}>Search to add friends</Text>
             </View>
           }
         />
@@ -237,13 +256,37 @@ export default function FriendsScreen({ navigation }: Props) {
       {activeTab === 'requests' && (
         <FlatList
           data={requests}
-          renderItem={renderRequestItem}
+          renderItem={({ item }) => (
+            <View style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{item.fromDisplayName.charAt(0).toUpperCase()}</Text>
+              </View>
+              <View style={styles.friendInfo}>
+                <Text style={[styles.friendName, { color: colors.text }]}>{item.fromDisplayName}</Text>
+                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.fromUsername}</Text>
+              </View>
+              <View style={styles.requestButtons}>
+                <TouchableOpacity
+                  style={[styles.requestBtn, styles.acceptBtn, { backgroundColor: colors.primary }]}
+                  onPress={() => handleAcceptRequest(item.fromUserId)}
+                >
+                  <Text style={[styles.requestBtnText, { color: colors.background }]}>Accept</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.requestBtn, styles.rejectBtn, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F5F5F5' }]}
+                  onPress={() => handleRejectRequest(item.fromUserId)}
+                >
+                  <Text style={[styles.requestBtnText, { color: colors.text }]}>Reject</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
           keyExtractor={(item) => item.id}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           ListEmptyComponent={
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>No friend requests</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>No friend requests</Text>
             </View>
           }
         />
@@ -253,42 +296,42 @@ export default function FriendsScreen({ navigation }: Props) {
         <ScrollView contentContainerStyle={styles.searchContent}>
           <View style={styles.searchBox}>
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, { backgroundColor: colors.card, color: colors.text, borderColor: colors.border }]}
               placeholder="Search by username..."
-              placeholderTextColor="#999"
+              placeholderTextColor={colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
               onSubmitEditing={handleSearch}
             />
             <TouchableOpacity
-              style={styles.searchBtn}
+              style={[styles.searchBtn, { backgroundColor: colors.primary }]}
               onPress={handleSearch}
               disabled={searching}
             >
               {searching ? (
-                <ActivityIndicator color="#000" size="small" />
+                <ActivityIndicator color={colors.background} size="small" />
               ) : (
-                <Text style={styles.searchBtnText}>Search</Text>
+                <Text style={[styles.searchBtnText, { color: colors.background }]}>Search</Text>
               )}
             </TouchableOpacity>
           </View>
 
           {searchResult && (
-            <View style={styles.searchResultCard}>
-              <View style={styles.avatarCircle}>
-                <Text style={styles.avatarText}>{searchResult.displayName.charAt(0).toUpperCase()}</Text>
+            <View style={[styles.searchResultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{searchResult.displayName.charAt(0).toUpperCase()}</Text>
               </View>
               <View style={styles.friendInfo}>
-                <Text style={styles.friendName}>{searchResult.displayName}</Text>
-                <Text style={styles.friendUsername}>@{searchResult.username}</Text>
+                <Text style={[styles.friendName, { color: colors.text }]}>{searchResult.displayName}</Text>
+                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{searchResult.username}</Text>
               </View>
               <TouchableOpacity
-                style={styles.sendRequestBtn}
+                style={[styles.sendRequestBtn, { backgroundColor: colors.primary }]}
                 onPress={() => handleSendRequest(searchResult.uid)}
                 disabled={loading}
               >
-                <Text style={styles.sendRequestBtnText}>
+                <Text style={[styles.sendRequestBtnText, { color: colors.background }]}>
                   {loading ? '...' : 'Add Friend'}
                 </Text>
               </TouchableOpacity>
@@ -297,12 +340,12 @@ export default function FriendsScreen({ navigation }: Props) {
 
           {searchResult === null && searchQuery && !searching && (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyText}>User not found</Text>
+              <Text style={[styles.emptyText, { color: colors.textSecondary }]}>User not found</Text>
             </View>
           )}
         </ScrollView>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -316,7 +359,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 60,
+    paddingTop: 12,
     paddingBottom: 16,
     backgroundColor: '#FFF',
     borderBottomWidth: 0.5,
