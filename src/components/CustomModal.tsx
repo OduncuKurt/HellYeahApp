@@ -146,12 +146,28 @@ export default function CustomModal({
         >
           {/* Title */}
           <Text style={[styles.title, { color: theme === 'dark' ? '#FFFFFF' : '#000000' }]}>
-            {title}
+            {title.split(/(Guinness)/g).map((part, index) => (
+              part === 'Guinness' ? (
+                <Text key={index} style={{ color: '#34C759' }}>
+                  {part}
+                </Text>
+              ) : (
+                <Text key={index}>{part}</Text>
+              )
+            ))}
           </Text>
 
           {/* Message */}
           <Text style={[styles.message, { color: theme === 'dark' ? '#ABABAB' : '#666666' }]}>
-            {message}
+            {message.split(/(Guinness)/g).map((part, index) => (
+              part === 'Guinness' ? (
+                <Text key={index} style={{ color: '#34C759', fontWeight: '700' }}>
+                  {part}
+                </Text>
+              ) : (
+                <Text key={index}>{part}</Text>
+              )
+            ))}
           </Text>
 
           {/* Buttons */}
