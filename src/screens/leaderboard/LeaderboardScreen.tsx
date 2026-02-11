@@ -81,45 +81,6 @@ export default function LeaderboardScreen({ navigation }: Props) {
     }
   };
 
-  const renderLeaderboardItem = ({ item }: { item: LeaderboardEntry }) => {
-    const isCurrentUser = item.user.uid === user?.uid;
-
-    return (
-      <TouchableOpacity
-        style={[styles.leaderboardCard, isCurrentUser && styles.currentUserCard]}
-        onPress={() => navigation.navigate('Profile', { userId: item.user.uid })}
-        activeOpacity={0.8}
-      >
-        <View style={styles.rankContainer}>
-          <Text style={[styles.rankText, item.rank <= 3 && styles.topRankText]}>
-            {getRankDisplay(item.rank)}
-          </Text>
-        </View>
-        <View style={styles.avatarCircle}>
-          <Text style={styles.avatarText}>{item.user.displayName.charAt(0).toUpperCase()}</Text>
-        </View>
-        <View style={styles.userInfo}>
-          <Text style={[styles.userName, isCurrentUser && styles.currentUserText]}>
-            {item.user.displayName}
-            {isCurrentUser && ' (You)'}
-          </Text>
-          <Text style={styles.username}>@{item.user.username}</Text>
-        </View>
-        <View style={styles.beerCount}>
-          <Text style={styles.beerNumber}>{item.beers}</Text>
-          <Text style={styles.beerLabel}>beers</Text>
-        </View>
-      </TouchableOpacity>
-    );
-  };
-
-  const renderEmptyState = () => (
-    <View style={styles.emptyState}>
-      <Text style={styles.emptyText}>No beers in {selectedYear} yet</Text>
-      <Text style={styles.emptySubtext}>Be the first!</Text>
-    </View>
-  );
-
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>

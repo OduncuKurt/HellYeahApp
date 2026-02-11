@@ -1,5 +1,5 @@
-import { ref, get, set, remove, query, orderByChild, equalTo, push } from 'firebase/database';
-import { database } from '../config/firebase';
+import { get, ref, remove, set } from 'firebase/database';
+import { auth, database } from '../config/firebase';
 import { FriendRequest, User } from '../types';
 
 // Kullanıcı ara (username ile)
@@ -39,6 +39,49 @@ export const sendFriendRequest = async (
   toUserId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
+    // Auth kontrolü
+    const currentUser = auth.currentUser;
+    console.log('🔐 Auth Status:', {
+      isAuthenticated: !!currentUser,
+      currentUserId: currentUser?.uid,
+      requestFromUserId: fromUserId,
+      userMatch: currentUser?.uid === fromUserId
+    });
+
+    if (!currentUser) {
+      return { 
+        success: false, 
+        error: 'Oturum açmanız gerekiyor. Lütfen tekrar giriş yapın.' 
+      };
+    }
+
+    if (currentUser.uid !== fromUserId) {
+      return { 
+        success: false, 
+        error: 'Kullanıcı kimliği uyuşmuyor. Lütfen tekrar giriş yapın.' 
+      };
+    }
+
+    // Auth token kontrolü
+    try {
+      const token = await currentUser.getIdToken();
+      console.log('🎫 Auth Token:', token ? 'Valid' : 'Invalid');
+    } catch (tokenError) {
+      console.error('❌ Token error:', tokenError);
+      return { 
+        success: false, 
+        error: 'Oturum süresi dolmuş. Lütfen tekrar giriş yapın.' 
+      };
+    }
+
+    // Debug: Auth durumunu kontrol et
+    console.log('🔍 Friend Request Debug:', {
+      fromUserId,
+      fromUsername,
+      toUserId,
+      timestamp: new Date().toISOString()
+    });
+
     // Kendine istek göndermesini engelle
     if (fromUserId === toUserId) {
       return { success: false, error: 'Kendine arkadaşlık isteği gönderemezsin.' };
@@ -59,9 +102,10 @@ export const sendFriendRequest = async (
     }
 
     // İstek gönder
+    console.log('📤 Sending friend request to path:', `friendRequests/${toUserId}/${fromUserId}`);
     await set(requestRef, {
       fromUserId,
-      fromUsername,
+      fromUsername: fromUsername || 'unknown',
       fromDisplayName,
       fromAvatar,
       toUserId,
@@ -69,9 +113,22 @@ export const sendFriendRequest = async (
       timestamp: Date.now(),
     });
 
+    console.log('✅ Friend request sent successfully');
     return { success: true };
   } catch (error: any) {
-    console.error('Send friend request error:', error);
+    console.error('❌ Send friend request error:', error);
+    console.error('Error code:', error.code);
+    console.error('Error message:', error.message);
+    console.error('Full error:', JSON.stringify(error, null, 2));
+    
+    // Daha anlamlı hata mesajları
+    if (error.code === 'PERMISSION_DENIED' || error.message?.includes('Permission denied')) {
+      return { 
+        success: false, 
+        error: 'Firebase izin hatası. Güvenlik kurallarını kontrol edin veya tekrar giriş yapın.' 
+      };
+    }
+    
     return { success: false, error: error.message };
   }
 };

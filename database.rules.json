@@ -1,0 +1,34 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "$uid === auth.uid",
+        "friends": {
+          ".read": "auth != null",
+          ".write": "auth != null"
+        }
+      }
+    },
+    "usernames": {
+      ".read": true,
+      "$username": {
+        ".write": "auth != null && !data.exists()"
+      }
+    },
+    "beers": {
+      ".read": "auth != null",
+      "$beerId": {
+        ".write": "auth != null"
+      }
+    },
+    "friendRequests": {
+      "$toUserId": {
+        ".read": "$toUserId === auth.uid || auth != null",
+        "$fromUserId": {
+          ".write": "auth != null && ($fromUserId === auth.uid || $toUserId === auth.uid)"
+        }
+      }
+    }
+  }
+}

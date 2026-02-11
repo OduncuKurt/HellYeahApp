@@ -135,50 +135,6 @@ export default function FriendsScreen({ navigation }: Props) {
     );
   };
 
-  const renderFriendItem = ({ item }: { item: User }) => (
-    <TouchableOpacity
-      style={styles.friendCard}
-      onPress={() => navigation.navigate('Profile', { userId: item.uid })}
-      onLongPress={() => handleRemoveFriend(item.uid, item.displayName)}
-      activeOpacity={0.8}
-    >
-      <View style={styles.avatarCircle}>
-        <Text style={styles.avatarText}>{item.displayName.charAt(0).toUpperCase()}</Text>
-      </View>
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.displayName}</Text>
-        <Text style={styles.friendUsername}>@{item.username}</Text>
-      </View>
-      <Text style={styles.friendBeers}>{item.totalBeers || 0} beers</Text>
-    </TouchableOpacity>
-  );
-
-  const renderRequestItem = ({ item }: { item: FriendRequest }) => (
-    <View style={styles.requestCard}>
-      <View style={styles.avatarCircle}>
-        <Text style={styles.avatarText}>{item.fromDisplayName.charAt(0).toUpperCase()}</Text>
-      </View>
-      <View style={styles.friendInfo}>
-        <Text style={styles.friendName}>{item.fromDisplayName}</Text>
-        <Text style={styles.friendUsername}>@{item.fromUsername}</Text>
-      </View>
-      <View style={styles.requestButtons}>
-        <TouchableOpacity
-          style={[styles.requestBtn, styles.acceptBtn]}
-          onPress={() => handleAcceptRequest(item.fromUserId)}
-        >
-          <Text style={styles.requestBtnText}>Accept</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.requestBtn, styles.rejectBtn]}
-          onPress={() => handleRejectRequest(item.fromUserId)}
-        >
-          <Text style={styles.requestBtnText}>Reject</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <StatusBar style={theme === 'dark' ? 'light' : 'dark'} />

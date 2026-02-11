@@ -211,6 +211,8 @@ export default function RegisterScreen({ navigation }: Props) {
       setCheckingUsername(false);
       if (!isAvailable) {
         setUsernameError('Bu kullanıcı adı zaten alınmış');
+      } else {
+        setUsernameError(''); // Kullanılabilir ise hata mesajını temizle
       }
     }, 500);
   };
@@ -375,10 +377,12 @@ export default function RegisterScreen({ navigation }: Props) {
                     <Text style={styles.availableIcon}>✓</Text>
                   )}
                 </View>
-                {usernameError ? (
+                {usernameError && !checkingUsername ? (
                   <Text style={[styles.errorText, { color: colors.error }]}>{usernameError}</Text>
-                ) : usernameAvailable === true ? (
+                ) : usernameAvailable === true && !checkingUsername ? (
                   <Text style={styles.successText}>Kullanılabilir</Text>
+                ) : checkingUsername ? (
+                  <Text style={[styles.hintText, { color: colors.textSecondary }]}>Kontrol ediliyor...</Text>
                 ) : (
                   <Text style={[styles.hintText, { color: colors.textSecondary }]}>3-20 karakter, harf, rakam ve _</Text>
                 )}
