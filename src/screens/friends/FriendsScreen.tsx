@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     ScrollView,
     StyleSheet,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import {
     acceptFriendRequest,
@@ -35,6 +35,7 @@ interface Props {
 export default function FriendsScreen({ navigation }: Props) {
   const { user } = useAuth();
   const { colors, theme } = useTheme();
+  const { showSuccess, showError, showConfirm } = useModal();
   const [activeTab, setActiveTab] = useState<'friends' | 'requests' | 'search'>('friends');
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
@@ -83,11 +84,11 @@ export default function FriendsScreen({ navigation }: Props) {
     setLoading(false);
 
     if (result.success) {
-      Alert.alert('Başarılı', 'Arkadaşlık isteği gönderildi!');
+      showSuccess('Başarılı', 'Arkadaşlık isteği gönderildi!');
       setSearchResult(null);
       setSearchQuery('');
     } else {
-      Alert.alert('Hata', result.error || 'İstek gönderilemedi.');
+      showError('Hata', result.error || 'İstek gönderilemedi.');
     }
   };
 
@@ -96,11 +97,11 @@ export default function FriendsScreen({ navigation }: Props) {
 
     const result = await acceptFriendRequest(user.uid, friendId);
     if (result.success) {
-      Alert.alert('Başarılı', 'Arkadaşlık isteği kabul edildi!');
+      showSuccess('Başarılı', 'Arkadaşlık isteği kabul edildi!');
       loadFriends();
       loadRequests();
     } else {
-      Alert.alert('Hata', result.error || 'İstek kabul edilemedi.');
+      showError('Hata', result.error || 'İstek kabul edilemedi.');
     }
   };
 
@@ -116,22 +117,15 @@ export default function FriendsScreen({ navigation }: Props) {
   const handleRemoveFriend = async (friendId: string, friendName: string): Promise<void> => {
     if (!user) return;
 
-    Alert.alert(
+    showConfirm(
       'Arkadaşlıktan Çıkar',
       `${friendName} ile arkadaşlığı sonlandırmak istediğine emin misin?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Çıkar',
-          style: 'destructive',
-          onPress: async () => {
-            const result = await removeFriend(user.uid, friendId);
-            if (result.success) {
-              loadFriends();
-            }
-          },
-        },
-      ]
+      async () => {
+        const result = await removeFriend(user.uid, friendId);
+        if (result.success) {
+          loadFriends();
+        }
+      }
     );
   };
 

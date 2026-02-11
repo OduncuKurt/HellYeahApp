@@ -3,18 +3,18 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { StatusBar } from 'expo-status-bar';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  Image,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View
+    ActivityIndicator,
+    FlatList,
+    Image,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { addComment, addReaction, deleteComment, getBeer, removeReaction, toggleGuinness } from '../../services/beerService';
 import { Beer, Comment, MainStackParamList } from '../../types';
@@ -33,6 +33,7 @@ export default function BeerDetailScreen({ navigation, route }: Props) {
   const { beerId } = route.params;
   const { user, refreshUserData } = useAuth();
   const { colors, theme } = useTheme();
+  const { showError, showConfirm } = useModal();
   const [beer, setBeer] = useState<Beer | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [commentText, setCommentText] = useState<string>('');
@@ -75,24 +76,21 @@ export default function BeerDetailScreen({ navigation, route }: Props) {
       setCommentText('');
       loadBeer();
     } else {
-      Alert.alert('Hata', result.error || 'Yorum eklenemedi.');
+      showError('Hata', result.error || 'Yorum eklenemedi.');
     }
   };
 
   const handleDeleteComment = (commentId: string, commentUserId: string): void => {
     if (!user || commentUserId !== user.uid) return;
 
-    Alert.alert('Yorumu Sil', 'Bu yorumu silmek istediğine emin misin?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Sil',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteComment(beerId, commentId, user.uid);
-          loadBeer();
-        },
-      },
-    ]);
+    showConfirm(
+      'Yorumu Sil',
+      'Bu yorumu silmek istediğine emin misin?',
+      async () => {
+        await deleteComment(beerId, commentId, user.uid);
+        loadBeer();
+      }
+    );
   };
 
   const handleToggleGuinness = async (): Promise<void> => {
@@ -101,24 +99,18 @@ export default function BeerDetailScreen({ navigation, route }: Props) {
     const currentState = beer.isGuinness ? 'Guinness' : 'normal';
     const newState = beer.isGuinness ? 'normal' : 'Guinness';
 
-    Alert.alert(
+    showConfirm(
       'Guinness Bayrağını Değiştir',
       `Bu birayı ${currentState} biradan ${newState} biraya çevirmek istediğine emin misin?`,
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Evet, Değiştir',
-          onPress: async () => {
-            const result = await toggleGuinness(beerId, user.uid);
-            if (result.success) {
-              loadBeer(); // Reload beer data
-              if (refreshUserData) await refreshUserData(); // Update stats
-            } else {
-              Alert.alert('Hata', result.error || 'İşlem başarısız oldu.');
-            }
-          },
-        },
-      ]
+      async () => {
+        const result = await toggleGuinness(beerId, user.uid);
+        if (result.success) {
+          loadBeer();
+          if (refreshUserData) await refreshUserData();
+        } else {
+          showError('Hata', result.error || 'İşlem başarısız oldu.');
+        }
+      }
     );
   };
 

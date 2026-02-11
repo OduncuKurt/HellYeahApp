@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useRef, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
@@ -26,6 +26,7 @@ interface Props {
 
 export default function RegisterScreen({ navigation }: Props) {
   const { theme, colors } = useTheme();
+  const { showError, showSuccess } = useModal();
   const [username, setUsername] = useState<string>('');
   const [displayName, setDisplayName] = useState<string>('');
   const [email, setEmail] = useState<string>('');
@@ -273,7 +274,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const handleRegister = async (): Promise<void> => {
     // Validate all fields
     if (!username || !displayName || !email || !password || !confirmPassword) {
-      Alert.alert('Hata', 'Lütfen tüm alanları doldurun.');
+      showError('Hata', 'Lütfen tüm alanları doldurun.');
       return;
     }
 
@@ -312,9 +313,9 @@ export default function RegisterScreen({ navigation }: Props) {
 
     const result = await register(email, password, username, displayName);
     if (!result.success) {
-      Alert.alert('Kayıt Hatası', result.error || 'Kayıt oluşturulamadı.');
+      showError('Kayıt Hatası', result.error || 'Kayıt oluşturulamadı.');
     } else {
-      Alert.alert('Başarılı', 'Hesabınız oluşturuldu!');
+      showSuccess('Başarılı', 'Hesabınız oluşturuldu!');
     }
   };
 

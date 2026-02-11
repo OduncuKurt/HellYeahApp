@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import {
-    Alert,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View
 } from 'react-native';
+import { useModal } from '../contexts/ModalContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { Comment } from '../types';
 
@@ -27,6 +27,7 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   onDeleteComment,
 }) => {
   const { colors, theme } = useTheme();
+  const { showConfirm } = useModal();
   const [commentText, setCommentText] = useState('');
   const [expanded, setExpanded] = useState(false);
 
@@ -49,17 +50,10 @@ const CommentSection: React.FC<CommentSectionProps> = ({
   };
 
   const handleDeleteComment = (commentId: string) => {
-    Alert.alert(
+    showConfirm(
       'Yorumu Sil',
       'Bu yorumu silmek istediğinizden emin misiniz?',
-      [
-        { text: 'İptal', style: 'cancel' },
-        {
-          text: 'Sil',
-          style: 'destructive',
-          onPress: () => onDeleteComment(commentId),
-        },
-      ]
+      () => onDeleteComment(commentId)
     );
   };
 

@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
@@ -26,6 +26,7 @@ interface Props {
 
 export default function ForgotPasswordScreen({ navigation }: Props) {
   const { theme, colors } = useTheme();
+  const { showError, showSuccess } = useModal();
   const [email, setEmail] = useState<string>('');
   const [emailError, setEmailError] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,7 +50,7 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
 
   const handleResetPassword = async (): Promise<void> => {
     if (!email) {
-      Alert.alert('Hata', 'Lütfen email adresinizi girin.');
+      showError('Hata', 'Lütfen email adresinizi girin.');
       return;
     }
 
@@ -63,18 +64,13 @@ export default function ForgotPasswordScreen({ navigation }: Props) {
     setLoading(false);
 
     if (result.success) {
-      Alert.alert(
+      showSuccess(
         'Başarılı',
         'Şifre sıfırlama bağlantısı email adresinize gönderildi. Lütfen email kutunuzu kontrol edin.',
-        [
-          {
-            text: 'Tamam',
-            onPress: () => navigation.goBack(),
-          },
-        ]
+        () => navigation.goBack()
       );
     } else {
-      Alert.alert('Hata', result.error || 'Şifre sıfırlama işlemi başarısız oldu.');
+      showError('Hata', result.error || 'Şifre sıfırlama işlemi başarısız oldu.');
     }
   };
 

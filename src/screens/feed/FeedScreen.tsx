@@ -5,7 +5,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     Image,
     Platform,
@@ -17,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { addBeer, getFriendsFeed } from '../../services/beerService';
 import { getFriends } from '../../services/friendService';
@@ -31,6 +31,7 @@ interface Props {
 export default function FeedScreen({ navigation }: Props) {
   const { user, refreshUserData } = useAuth();
   const { colors, theme } = useTheme();
+  const { showError, showCustomConfirm } = useModal();
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -68,7 +69,7 @@ export default function FeedScreen({ navigation }: Props) {
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('İzin Gerekli', 'Kamera kullanmak için izin vermelisiniz.');
+      showError('İzin Gerekli', 'Kamera kullanmak için izin vermelisiniz.');
       return;
     }
 
@@ -81,26 +82,18 @@ export default function FeedScreen({ navigation }: Props) {
 
       if (!result.canceled && result.assets[0]) {
         // Show Guinness selection dialog
-        Alert.alert(
+        showCustomConfirm(
           'Bira Türü',
-          'Bu bir Guinness birası mı?',
-          [
-            {
-              text: 'Hayır',
-              onPress: () => uploadBeer(result.assets[0].uri, false),
-              style: 'cancel',
-            },
-            {
-              text: '🍀 Evet, Guinness',
-              onPress: () => uploadBeer(result.assets[0].uri, true),
-            },
-          ],
-          { cancelable: false }
+          '🍀 Bu bir Guinness birası mı?',
+          'Evet',
+          'Hayır',
+          () => uploadBeer(result.assets[0].uri, true),
+          () => uploadBeer(result.assets[0].uri, false)
         );
       }
     } catch (error) {
       console.error('Add beer error:', error);
-      Alert.alert('Hata', 'Fotoğraf çekilemedi.');
+      showError('Hata', 'Fotoğraf çekilemedi.');
     }
   };
 
@@ -121,7 +114,7 @@ export default function FeedScreen({ navigation }: Props) {
       loadFeed();
       await refreshUserData(); // Refresh to update stats
     } else {
-      Alert.alert('Hata', addResult.error || 'Bira eklenemedi.');
+      showError('Hata', addResult.error || 'Bira eklenemedi.');
     }
   };
 

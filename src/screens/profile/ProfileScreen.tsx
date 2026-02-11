@@ -5,7 +5,6 @@ import { ref as dbRef, get } from 'firebase/database';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     FlatList,
     Image,
     Platform,
@@ -18,6 +17,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { database } from '../../config/firebase';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { getUserBeers } from '../../services/beerService';
 import { Beer, MainStackParamList, User } from '../../types';
@@ -33,6 +33,7 @@ interface Props {
 export default function ProfileScreen({ navigation, route }: Props) {
   const { user: currentUser, logout } = useAuth();
   const { colors, theme, toggleTheme } = useTheme();
+  const { showConfirm } = useModal();
   const userId = route.params?.userId || currentUser?.uid;
   const isOwnProfile = userId === currentUser?.uid;
 
@@ -70,16 +71,13 @@ export default function ProfileScreen({ navigation, route }: Props) {
   };
 
   const handleLogout = (): void => {
-    Alert.alert('Çıkış Yap', 'Çıkış yapmak istediğine emin misin?', [
-      { text: 'İptal', style: 'cancel' },
-      {
-        text: 'Çıkış',
-        style: 'destructive',
-        onPress: async () => {
-          await logout();
-        },
-      },
-    ]);
+    showConfirm(
+      'Çıkış Yap',
+      'Çıkış yapmak istediğine emin misin?',
+      async () => {
+        await logout();
+      }
+    );
   };
 
   const isGuinness = (beer: Beer): boolean => {

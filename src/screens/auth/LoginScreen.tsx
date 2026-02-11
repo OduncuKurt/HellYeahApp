@@ -3,7 +3,6 @@ import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -15,6 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
+import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
 
@@ -26,6 +26,7 @@ interface Props {
 
 export default function LoginScreen({ navigation }: Props) {
   const { theme, colors } = useTheme();
+  const { showError } = useModal();
   const [email, setEmail] = useState<string>('');
   const [password, setPassword] = useState<string>('');
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -62,7 +63,7 @@ export default function LoginScreen({ navigation }: Props) {
   const handleLogin = async (): Promise<void> => {
     // Validate
     if (!email || !password) {
-      Alert.alert('Hata', 'Lütfen email ve şifrenizi girin.');
+      showError('Hata', 'Lütfen email ve şifrenizi girin.');
       return;
     }
 
@@ -78,7 +79,7 @@ export default function LoginScreen({ navigation }: Props) {
 
     const result = await login(email, password);
     if (!result.success) {
-      Alert.alert('Giriş Hatası', result.error || 'Giriş yapılamadı.');
+      showError('Giriş Hatası', result.error || 'Giriş yapılamadı.');
     }
   };
 
