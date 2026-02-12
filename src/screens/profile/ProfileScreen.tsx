@@ -6,15 +6,15 @@ import { ref as dbRef, get, update } from 'firebase/database';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    Platform,
-    Pressable,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Platform,
+  Pressable,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { database } from '../../config/firebase';
@@ -256,6 +256,19 @@ export default function ProfileScreen({ navigation, route }: Props) {
           <View>
             {/* Profile Info */}
             <View style={[styles.profileInfo, { backgroundColor: colors.card }]}>
+              {/* Background Image with Blur */}
+              {profileUser.avatar && (
+                <View style={styles.backgroundImageContainer}>
+                  <Image 
+                    source={{ uri: profileUser.avatar }} 
+                    style={styles.backgroundImage}
+                    blurRadius={5}
+                  />
+                  <View style={[styles.backgroundOverlay, { backgroundColor: theme === 'dark' ? 'rgba(0,0,0,0.6)' : 'rgba(255,255,255,0.6)' }]} />
+                </View>
+              )}
+              
+              {/* Profile Content */}
               <TouchableOpacity
                 style={[styles.avatarCircle, { backgroundColor: colors.primary }]}
                 onPress={handleProfilePhotoPress}
@@ -394,6 +407,29 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 30,
     backgroundColor: '#FFF',
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  backgroundImageContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  backgroundImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  backgroundOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(255,255,255,0.6)',
   },
   avatarCircle: {
     width: 80,
@@ -403,6 +439,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
+    zIndex: 1,
   },
   avatarText: {
     fontSize: 36,
@@ -439,17 +476,20 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#000',
     marginBottom: 4,
+    zIndex: 1,
   },
   username: {
     fontSize: 15,
     color: '#999',
     marginBottom: 20,
+    zIndex: 1,
   },
   themeToggle: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
     marginBottom: 20,
+    zIndex: 1,
   },
   themeToggleText: {
     fontSize: 14,
@@ -463,6 +503,7 @@ const styles = StyleSheet.create({
     padding: 20,
     borderWidth: 0.5,
     borderColor: '#E0E0E0',
+    zIndex: 1,
   },
   statItem: {
     flex: 1,
