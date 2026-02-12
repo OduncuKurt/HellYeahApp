@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Avatar fotoğrafları için kurallar
+    match /avatars/{fileName} {
+      // Herkes okuyabilir (profil fotoğraflarını görmek için)
+      allow read: if true;
+      
+      // Sadece giriş yapmış kullanıcılar yazabilir
+      // Dosya boyutu max 5MB olmalı
+      // Sadece image dosyaları kabul edilir
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Beer fotoğrafları için kurallar (eğer varsa)
+    match /beers/{fileName} {
+      // Herkes okuyabilir
+      allow read: if true;
+      
+      // Sadece giriş yapmış kullanıcılar yazabilir
+      // Dosya boyutu max 10MB olmalı
+      // Sadece image dosyaları kabul edilir
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+  }
+}

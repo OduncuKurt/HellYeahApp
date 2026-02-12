@@ -13,6 +13,12 @@ import { useTheme } from '../contexts/ThemeContext';
 
 export type ModalType = 'success' | 'error' | 'warning' | 'info' | 'confirm';
 
+export interface ActionOption {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+}
+
 interface CustomModalProps {
   visible: boolean;
   type?: ModalType;
@@ -23,6 +29,7 @@ interface CustomModalProps {
   confirmText?: string;
   cancelText?: string;
   singleButton?: boolean;
+  actions?: ActionOption[];
 }
 
 export default function CustomModal({
@@ -32,9 +39,10 @@ export default function CustomModal({
   message,
   onConfirm,
   onCancel,
-  confirmText = 'Tamam',
-  cancelText = 'İptal',
+  confirmText = 'OK',
+  cancelText = 'Cancel',
   singleButton = false,
+  actions,
 }: CustomModalProps) {
   const { theme } = useTheme();
   const scaleAnim = useRef(new Animated.Value(0)).current;
@@ -158,55 +166,118 @@ export default function CustomModal({
           </Text>
 
           {/* Message */}
-          <Text style={[styles.message, { color: theme === 'dark' ? '#ABABAB' : '#666666' }]}>
-            {message.split(/(Guinness)/g).map((part, index) => (
-              part === 'Guinness' ? (
-                <Text key={index} style={{ color: '#34C759', fontWeight: '700' }}>
-                  {part}
-                </Text>
-              ) : (
-                <Text key={index}>{part}</Text>
-              )
-            ))}
-          </Text>
+          {message && (
+            <Text style={[styles.message, { color: theme === 'dark' ? '#ABABAB' : '#666666' }]}>
+              {message.split(/(Guinness)/g).map((part, index) => (
+                part === 'Guinness' ? (
+                  <Text key={index} style={{ color: '#34C759', fontWeight: '700' }}>
+                    {part}
+                  </Text>
+                ) : (
+                  <Text key={index}>{part}</Text>
+                )
+              ))}
+            </Text>
+          )}
 
           {/* Buttons */}
-          <View style={[styles.buttonContainer, singleButton && styles.buttonContainerSingle]}>
-            {!singleButton && (
+          {actions && actions.length > 0 ? (
+            <View style={styles.actionSheetContainer}>
+              {actions.map((action, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.actionButton,
+                    {
+                      backgroundColor: theme === 'dark' ? '#2C2C2E' : '#F2F2F7',
+                      borderBottomWidth: index < actions.length - 1 ? 0.5 : 0,
+                      borderBottomColor: theme === 'dark' ? '#3A3A3C' : '#E0E0E0',
+                    },
+                  ]}
+                  onPress={() => {
+                    action.onPress();
+                    if (onCancel) onCancel();
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <Text
+                    style={[
+                      styles.actionButtonText,
+                      {
+                        color: action.destructive
+                          ? '#FF3B30'
+                          : theme === 'dark'
+                          ? '#FFFFFF'
+                          : '#000000',
+                        fontWeight: action.destructive ? '600' : '500',
+                      },
+                    ]}
+                  >
+                    {action.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
               <TouchableOpacity
                 style={[
-                  styles.button,
-                  styles.cancelButton,
+                  styles.actionButton,
+                  styles.cancelActionButton,
                   {
-                    backgroundColor: theme === 'dark' ? '#2C2C2E' : '#F2F2F7',
+                    backgroundColor: theme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                    marginTop: 12,
                   },
                 ]}
                 onPress={handleCancel}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.buttonText, { color: theme === 'dark' ? '#FFFFFF' : '#000000' }]}>
-                  {cancelText}
+                <Text
+                  style={[
+                    styles.actionButtonText,
+                    styles.cancelActionButtonText,
+                    { color: theme === 'dark' ? '#FFFFFF' : '#000000' },
+                  ]}
+                >
+                  Cancel
                 </Text>
               </TouchableOpacity>
-            )}
+            </View>
+          ) : (
+            <View style={[styles.buttonContainer, singleButton && styles.buttonContainerSingle]}>
+              {!singleButton && (
+                <TouchableOpacity
+                  style={[
+                    styles.button,
+                    styles.cancelButton,
+                    {
+                      backgroundColor: theme === 'dark' ? '#2C2C2E' : '#F2F2F7',
+                    },
+                  ]}
+                  onPress={handleCancel}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.buttonText, { color: theme === 'dark' ? '#FFFFFF' : '#000000' }]}>
+                    {cancelText}
+                  </Text>
+                </TouchableOpacity>
+              )}
 
-            <TouchableOpacity
-              style={[
-                styles.button,
-                styles.confirmButton,
-                {
-                  backgroundColor: getColorForType(),
-                },
-                singleButton && { flex: 1 },
-              ]}
-              onPress={handleConfirm}
-              activeOpacity={0.7}
-            >
-              <Text style={[styles.buttonText, styles.confirmButtonText]}>
-                {confirmText}
-              </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity
+                style={[
+                  styles.button,
+                  styles.confirmButton,
+                  {
+                    backgroundColor: getColorForType(),
+                  },
+                  singleButton && { flex: 1 },
+                ]}
+                onPress={handleConfirm}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.buttonText, styles.confirmButtonText]}>
+                  {confirmText}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </Animated.View>
       </View>
     </Modal>
@@ -288,5 +359,25 @@ const styles = StyleSheet.create({
   },
   confirmButtonText: {
     color: '#FFFFFF',
+  },
+  actionSheetContainer: {
+    width: '100%',
+  },
+  actionButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 52,
+  },
+  actionButtonText: {
+    fontSize: 17,
+    fontWeight: '500',
+    letterSpacing: -0.3,
+  },
+  cancelActionButton: {
+    borderRadius: 14,
+  },
+  cancelActionButtonText: {
+    fontWeight: '600',
   },
 });

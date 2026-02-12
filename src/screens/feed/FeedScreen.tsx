@@ -4,15 +4,15 @@ import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useState } from 'react';
 import {
-    ActivityIndicator,
-    FlatList,
-    Image,
-    Platform,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  FlatList,
+  Image,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../contexts/AuthContext';
@@ -69,7 +69,7 @@ export default function FeedScreen({ navigation }: Props) {
 
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      showError('İzin Gerekli', 'Kamera kullanmak için izin vermelisiniz.');
+      showError('Permission Required', 'Camera permission is required.');
       return;
     }
 
@@ -83,17 +83,17 @@ export default function FeedScreen({ navigation }: Props) {
       if (!result.canceled && result.assets[0]) {
         // Show Guinness selection dialog
         showCustomConfirm(
-          'Bira Türü',
-          '🍀 Bu bir Guinness birası mı?',
-          'Evet',
-          'Hayır',
+          'Beer Type',
+          'Is this a Guinness beer? 🍀',
+          'Yes',
+          'No',
           () => uploadBeer(result.assets[0].uri, true),
           () => uploadBeer(result.assets[0].uri, false)
         );
       }
     } catch (error) {
       console.error('Add beer error:', error);
-      showError('Hata', 'Fotoğraf çekilemedi.');
+      showError('Error', 'Failed to take photo.');
     }
   };
 
@@ -114,7 +114,7 @@ export default function FeedScreen({ navigation }: Props) {
       loadFeed();
       await refreshUserData(); // Refresh to update stats
     } else {
-      showError('Hata', addResult.error || 'Bira eklenemedi.');
+      showError('Error', addResult.error || 'Failed to add beer.');
     }
   };
 
@@ -125,9 +125,9 @@ export default function FeedScreen({ navigation }: Props) {
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 60) return `${minutes}dk`;
-    if (hours < 24) return `${hours}sa`;
-    return `${days}g`;
+    if (minutes < 60) return `${minutes}m`;
+    if (hours < 24) return `${hours}h`;
+    return `${days}d`;
   };
 
   const isGuinness = (beer: Beer): boolean => {
@@ -143,7 +143,11 @@ export default function FeedScreen({ navigation }: Props) {
       <View style={styles.cardHeader}>
         <View style={styles.userInfo}>
           <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.avatarText, { color: colors.background }]}>{item.userName.charAt(0).toUpperCase()}</Text>
+            {item.userAvatar ? (
+              <Image source={{ uri: item.userAvatar }} style={styles.avatarImage} />
+            ) : (
+              <Text style={[styles.avatarText, { color: colors.background }]}>{item.userName.charAt(0).toUpperCase()}</Text>
+            )}
           </View>
           <View>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -210,7 +214,11 @@ export default function FeedScreen({ navigation }: Props) {
             <Text style={[styles.headerBtnText, { color: colors.textSecondary }]}>Board</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={() => navigation.navigate('Profile', {})} style={[styles.profileBtn, { backgroundColor: colors.primary }]}>
-            <Text style={[styles.profileBtnText, { color: colors.background }]}>{user?.displayName.charAt(0).toUpperCase()}</Text>
+            {user?.avatar ? (
+              <Image source={{ uri: user.avatar }} style={styles.profileBtnImage} />
+            ) : (
+              <Text style={[styles.profileBtnText, { color: colors.background }]}>{user?.displayName.charAt(0).toUpperCase()}</Text>
+            )}
           </TouchableOpacity>
         </View>
       </View>
@@ -300,6 +308,11 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFF',
   },
+  profileBtnImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 16,
+  },
   feedContent: {
     flexGrow: 1,
     paddingBottom: 100,
@@ -332,6 +345,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#FFF',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 18,
   },
   userName: {
     fontSize: 14,

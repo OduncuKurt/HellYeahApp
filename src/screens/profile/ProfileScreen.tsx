@@ -1,7 +1,9 @@
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
-import { ref as dbRef, get } from 'firebase/database';
+import { ref as dbRef, get, update } from 'firebase/database';
+import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
@@ -31,15 +33,16 @@ interface Props {
 }
 
 export default function ProfileScreen({ navigation, route }: Props) {
-  const { user: currentUser, logout } = useAuth();
+  const { user: currentUser, logout, refreshUserData } = useAuth();
   const { colors, theme, toggleTheme } = useTheme();
-  const { showConfirm } = useModal();
+  const { showConfirm, showActionSheet, showError, showSuccess } = useModal();
   const userId = route.params?.userId || currentUser?.uid;
   const isOwnProfile = userId === currentUser?.uid;
 
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false);
 
   useEffect(() => {
     loadProfile();
@@ -70,10 +73,113 @@ export default function ProfileScreen({ navigation, route }: Props) {
     }
   };
 
+  const handleProfilePhotoPress = (): void => {
+    if (!isOwnProfile) return;
+
+    showActionSheet(
+      'Profile Photo',
+      'How would you like to update your profile photo?',
+      [
+        {
+          label: 'Take Photo',
+          onPress: () => pickImageFromCamera(),
+        },
+        {
+          label: 'Choose from Gallery',
+          onPress: () => pickImageFromGallery(),
+        },
+      ]
+    );
+  };
+
+  const pickImageFromCamera = async (): Promise<void> => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        showError('Permission Required', 'Camera permission is required to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfilePhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      showError('Error', 'An error occurred while opening the camera.');
+    }
+  };
+
+  const pickImageFromGallery = async (): Promise<void> => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        showError('Permission Required', 'Gallery permission is required to choose photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        await uploadProfilePhoto(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Gallery error:', error);
+      showError('Error', 'An error occurred while opening the gallery.');
+    }
+  };
+
+  const uploadProfilePhoto = async (uri: string): Promise<void> => {
+    if (!currentUser?.uid) return;
+
+    setUploadingPhoto(true);
+    try {
+      // Fetch the image
+      const response = await fetch(uri);
+      const blob = await response.blob();
+
+      // Upload to Firebase Storage
+      const storage = getStorage();
+      const filename = `profile_${currentUser.uid}_${Date.now()}.jpg`;
+      const imageRef = storageRef(storage, `avatars/${filename}`);
+      
+      await uploadBytes(imageRef, blob);
+      const downloadURL = await getDownloadURL(imageRef);
+
+      // Update user profile in database
+      const userRef = dbRef(database, `users/${currentUser.uid}`);
+      await update(userRef, {
+        avatar: downloadURL,
+      });
+
+      // Refresh user data
+      await refreshUserData();
+      await loadProfile();
+
+      showSuccess('Success!', 'Your profile photo has been updated.');
+    } catch (error) {
+      console.error('Upload error:', error);
+      showError('Error', 'An error occurred while uploading the photo.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleLogout = (): void => {
     showConfirm(
-      'Çıkış Yap',
-      'Çıkış yapmak istediğine emin misin?',
+      'Logout',
+      'Are you sure you want to logout?',
       async () => {
         await logout();
       }
@@ -150,9 +256,29 @@ export default function ProfileScreen({ navigation, route }: Props) {
           <View>
             {/* Profile Info */}
             <View style={[styles.profileInfo, { backgroundColor: colors.card }]}>
-              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.avatarText, { color: colors.background }]}>{profileUser.displayName.charAt(0).toUpperCase()}</Text>
-              </View>
+              <TouchableOpacity
+                style={[styles.avatarCircle, { backgroundColor: colors.primary }]}
+                onPress={handleProfilePhotoPress}
+                disabled={!isOwnProfile || uploadingPhoto}
+                activeOpacity={isOwnProfile ? 0.7 : 1}
+              >
+                {profileUser.avatar ? (
+                  <Image source={{ uri: profileUser.avatar }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={[styles.avatarText, { color: colors.background }]}>
+                    {profileUser.displayName.charAt(0).toUpperCase()}
+                  </Text>
+                )}
+                {isOwnProfile && (
+                  <View style={styles.cameraIconContainer}>
+                    {uploadingPhoto ? (
+                      <ActivityIndicator size="small" color={colors.primary} />
+                    ) : (
+                      <Text style={styles.cameraIcon}>+</Text>
+                    )}
+                  </View>
+                )}
+              </TouchableOpacity>
               <Text style={[styles.displayName, { color: colors.text }]}>{profileUser.displayName}</Text>
               <Text style={[styles.username, { color: colors.textSecondary }]}>@{profileUser.username}</Text>
 
@@ -282,6 +408,31 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '700',
     color: '#FFF',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 40,
+  },
+  cameraIconContainer: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#FFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#000',
+  },
+  cameraIcon: {
+    fontSize: 20,
+    fontWeight: '400',
+    color: '#000',
+    lineHeight: 20,
+    textAlign: 'center',
   },
   displayName: {
     fontSize: 22,

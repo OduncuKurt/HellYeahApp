@@ -1,6 +1,12 @@
 import React, { createContext, ReactNode, useContext, useState } from 'react';
 import CustomModal, { ModalType } from '../components/CustomModal';
 
+interface ActionOption {
+  label: string;
+  onPress: () => void;
+  destructive?: boolean;
+}
+
 interface ModalOptions {
   type?: ModalType;
   title: string;
@@ -9,6 +15,7 @@ interface ModalOptions {
   cancelText?: string;
   onConfirm?: () => void;
   onCancel?: () => void;
+  actions?: ActionOption[];
 }
 
 interface ModalContextType {
@@ -29,6 +36,11 @@ interface ModalContextType {
     cancelText: string,
     onConfirm: () => void,
     onCancel?: () => void
+  ) => void;
+  showActionSheet: (
+    title: string,
+    message: string,
+    actions: ActionOption[]
   ) => void;
   hideModal: () => void;
 }
@@ -69,7 +81,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
       type: 'success',
       title,
       message,
-      confirmText: 'Tamam',
+      confirmText: 'OK',
       onConfirm: () => {
         hideModal();
         if (onConfirm) onConfirm();
@@ -83,7 +95,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
       type: 'error',
       title,
       message,
-      confirmText: 'Tamam',
+      confirmText: 'OK',
       onConfirm: () => {
         hideModal();
         if (onConfirm) onConfirm();
@@ -97,7 +109,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
       type: 'warning',
       title,
       message,
-      confirmText: 'Tamam',
+      confirmText: 'OK',
       onConfirm: () => {
         hideModal();
         if (onConfirm) onConfirm();
@@ -116,8 +128,8 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
       type: 'confirm',
       title,
       message,
-      confirmText: 'Evet',
-      cancelText: 'Hayır',
+      confirmText: 'Yes',
+      cancelText: 'No',
       onConfirm: () => {
         hideModal();
         onConfirm();
@@ -154,6 +166,20 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
     });
   };
 
+  const showActionSheet = (
+    title: string,
+    message: string,
+    actions: ActionOption[]
+  ) => {
+    showModal({
+      type: 'info',
+      title,
+      message,
+      actions,
+      onCancel: hideModal,
+    });
+  };
+
   const value: ModalContextType = {
     showModal,
     showSuccess,
@@ -161,6 +187,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
     showWarning,
     showConfirm,
     showCustomConfirm,
+    showActionSheet,
     hideModal,
   };
 
@@ -177,6 +204,7 @@ export const ModalProvider: React.FC<ModalProviderProps> = ({ children }) => {
         onConfirm={modalOptions.onConfirm}
         onCancel={modalOptions.onCancel}
         singleButton={modalOptions.type !== 'confirm'}
+        actions={modalOptions.actions}
       />
     </ModalContext.Provider>
   );
