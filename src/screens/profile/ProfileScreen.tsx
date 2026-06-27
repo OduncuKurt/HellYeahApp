@@ -1,5 +1,6 @@
 import { RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { ref as dbRef, get, update } from 'firebase/database';
@@ -9,6 +10,7 @@ import {
   ActivityIndicator,
   FlatList,
   Image,
+  Linking,
   Platform,
   Pressable,
   StyleSheet,
@@ -94,35 +96,74 @@ export default function ProfileScreen({ navigation, route }: Props) {
 
   const pickImageFromCamera = async (): Promise<void> => {
     try {
-      const { status } = await ImagePicker.requestCameraPermissionsAsync();
-      if (status !== 'granted') {
-        showError('Permission Required', 'Camera permission is required to take photos.');
+      const permResult = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (permResult.status !== 'granted') {
+        if (!permResult.canAskAgain) {
+          showError(
+            'Camera Access Denied',
+            'Camera access is permanently denied. Please enable it in Settings > Expo Go > Camera.'
+          );
+        } else {
+          showError('Permission Required', 'Camera permission is required to take photos.');
+        }
         return;
       }
 
+      // iOS: action sheet kapanma animasyonunu bekle
+      await new Promise(resolve => setTimeout(resolve, 350));
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
+        cameraFacing: 'front',  // Profil fotoğrafı için ön kamera
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
       });
 
       if (!result.canceled && result.assets[0]) {
-        await uploadProfilePhoto(result.assets[0].uri);
+        let imageUri = result.assets[0].uri;
+
+        // iOS ön kamera ayna sorunu: çekimden sonra yatay flip uygula
+        if (Platform.OS === 'ios') {
+          const flipped = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ flip: ImageManipulator.FlipType.Horizontal }],
+            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          imageUri = flipped.uri;
+        }
+
+        await uploadProfilePhoto(imageUri);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Camera error:', error);
-      showError('Error', 'An error occurred while opening the camera.');
+      showError('Camera Error', error?.message || 'An error occurred while opening the camera.');
     }
   };
 
   const pickImageFromGallery = async (): Promise<void> => {
     try {
-      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (status !== 'granted') {
-        showError('Permission Required', 'Gallery permission is required to choose photos.');
+      const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+      const hasAccess = permResult.status === 'granted' || permResult.status === 'limited';
+
+      if (!hasAccess) {
+        if (!permResult.canAskAgain) {
+          // iOS: kalıcı reddedilmiş → doğrudan Ayarlar'a aç
+          showConfirm(
+            'Photo Library Access Denied',
+            'Photo access is permanently denied for Expo Go. Open Settings to enable it?',
+            () => Linking.openSettings()
+          );
+        } else {
+          showError('Permission Required', 'Photo library permission is required to choose photos.');
+        }
         return;
       }
+
+      // iOS: action sheet kapanma animasyonunu bekle
+      await new Promise(resolve => setTimeout(resolve, 350));
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ['images'],
@@ -134,9 +175,9 @@ export default function ProfileScreen({ navigation, route }: Props) {
       if (!result.canceled && result.assets[0]) {
         await uploadProfilePhoto(result.assets[0].uri);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Gallery error:', error);
-      showError('Error', 'An error occurred while opening the gallery.');
+      showError('Gallery Error', error?.message || 'An error occurred while opening the gallery.');
     }
   };
 
@@ -279,7 +320,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
                   <Image source={{ uri: profileUser.avatar }} style={styles.avatarImage} />
                 ) : (
                   <Text style={[styles.avatarText, { color: colors.background }]}>
-                    {profileUser.displayName.charAt(0).toUpperCase()}
+                    {(profileUser.displayName || profileUser.username || '?').charAt(0).toUpperCase()}
                   </Text>
                 )}
                 {isOwnProfile && (
@@ -292,8 +333,8 @@ export default function ProfileScreen({ navigation, route }: Props) {
                   </View>
                 )}
               </TouchableOpacity>
-              <Text style={[styles.displayName, { color: colors.text }]}>{profileUser.displayName}</Text>
-              <Text style={[styles.username, { color: colors.textSecondary }]}>@{profileUser.username}</Text>
+              <Text style={[styles.displayName, { color: colors.text }]}>{profileUser.displayName || profileUser.username || 'User'}</Text>
+              <Text style={[styles.username, { color: colors.textSecondary }]}>@{profileUser.username || ''}</Text>
 
               {isOwnProfile && (
                 <TouchableOpacity
