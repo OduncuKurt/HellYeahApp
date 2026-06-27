@@ -1,32 +1,43 @@
-import { get, ref, remove, set } from 'firebase/database';
+import { get, query, ref, remove, set, orderByKey, startAt, endAt, limitToFirst } from 'firebase/database';
 import { auth, database } from '../config/firebase';
 import { FriendRequest, User } from '../types';
 
-// Kullanıcı ara (username ile)
-export const searchUserByUsername = async (username: string): Promise<User | null> => {
+// Kullanıcı ara (username ile - partial match destekler)
+export const searchUsersByUsername = async (searchQuery: string): Promise<User[]> => {
   try {
-    const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
-    const snapshot = await get(usernameRef);
+    const q = query(
+      ref(database, 'usernames'),
+      orderByKey(),
+      startAt(searchQuery.toLowerCase()),
+      endAt(searchQuery.toLowerCase() + '\uf8ff'),
+      limitToFirst(10)
+    );
+    const snapshot = await get(q);
 
     if (!snapshot.exists()) {
-      return null;
+      return [];
     }
 
-    const userId = snapshot.val();
-    const userRef = ref(database, `users/${userId}`);
-    const userSnapshot = await get(userRef);
+    const userIds = Object.values(snapshot.val()) as string[];
+    const uniqueIds = Array.from(new Set(userIds));
+    
+    const users: User[] = [];
+    for (const userId of uniqueIds) {
+      const userRef = ref(database, `users/${userId}`);
+      const userSnapshot = await get(userRef);
 
-    if (userSnapshot.exists()) {
-      return {
-        uid: userId,
-        ...userSnapshot.val(),
-      } as User;
+      if (userSnapshot.exists()) {
+        users.push({
+          uid: userId,
+          ...userSnapshot.val(),
+        } as User);
+      }
     }
 
-    return null;
+    return users;
   } catch (error) {
     console.error('Search user error:', error);
-    return null;
+    return [];
   }
 };
 

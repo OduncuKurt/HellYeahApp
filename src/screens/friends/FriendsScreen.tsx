@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     FlatList,
+    Image,
     ScrollView,
     StyleSheet,
     Text,
@@ -21,7 +22,7 @@ import {
     getFriends,
     rejectFriendRequest,
     removeFriend,
-    searchUserByUsername,
+    searchUsersByUsername,
     sendFriendRequest,
 } from '../../services/friendService';
 import { FriendRequest, MainStackParamList, User } from '../../types';
@@ -40,7 +41,7 @@ export default function FriendsScreen({ navigation }: Props) {
   const [friends, setFriends] = useState<User[]>([]);
   const [requests, setRequests] = useState<FriendRequest[]>([]);
   const [searchQuery, setSearchQuery] = useState<string>('');
-  const [searchResult, setSearchResult] = useState<User | null>(null);
+  const [searchResults, setSearchResults] = useState<User[]>([]);
   const [searching, setSearching] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -65,8 +66,8 @@ export default function FriendsScreen({ navigation }: Props) {
     if (!searchQuery.trim()) return;
 
     setSearching(true);
-    const result = await searchUserByUsername(searchQuery.trim());
-    setSearchResult(result);
+    const results = await searchUsersByUsername(searchQuery.trim());
+    setSearchResults(results);
     setSearching(false);
   };
 
@@ -85,7 +86,7 @@ export default function FriendsScreen({ navigation }: Props) {
 
     if (result.success) {
       showSuccess('Başarılı', 'Arkadaşlık isteği gönderildi!');
-      setSearchResult(null);
+      setSearchResults([]);
       setSearchQuery('');
     } else {
       showError('Hata', result.error || 'İstek gönderilemedi.');
@@ -182,11 +183,10 @@ export default function FriendsScreen({ navigation }: Props) {
               activeOpacity={0.8}
             >
               <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.avatarText, { color: colors.background }]}>{item.displayName.charAt(0).toUpperCase()}</Text>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{item.username.charAt(0).toUpperCase()}</Text>
               </View>
               <View style={styles.friendInfo}>
-                <Text style={[styles.friendName, { color: colors.text }]}>{item.displayName}</Text>
-                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.username}</Text>
+                <Text style={[styles.friendName, { color: colors.text }]}>@{item.username}</Text>
               </View>
               <Text style={[styles.friendBeers, { color: colors.textSecondary }]}>{item.totalBeers || 0} beers</Text>
             </TouchableOpacity>
@@ -209,11 +209,10 @@ export default function FriendsScreen({ navigation }: Props) {
           renderItem={({ item }) => (
             <View style={[styles.requestCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.avatarText, { color: colors.background }]}>{item.fromDisplayName.charAt(0).toUpperCase()}</Text>
+                <Text style={[styles.avatarText, { color: colors.background }]}>{item.fromUsername.charAt(0).toUpperCase()}</Text>
               </View>
               <View style={styles.friendInfo}>
-                <Text style={[styles.friendName, { color: colors.text }]}>{item.fromDisplayName}</Text>
-                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{item.fromUsername}</Text>
+                <Text style={[styles.friendName, { color: colors.text }]}>@{item.fromUsername}</Text>
               </View>
               <View style={styles.requestButtons}>
                 <TouchableOpacity
@@ -267,28 +266,37 @@ export default function FriendsScreen({ navigation }: Props) {
             </TouchableOpacity>
           </View>
 
-          {searchResult && (
-            <View style={[styles.searchResultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-                <Text style={[styles.avatarText, { color: colors.background }]}>{searchResult.displayName.charAt(0).toUpperCase()}</Text>
-              </View>
-              <View style={styles.friendInfo}>
-                <Text style={[styles.friendName, { color: colors.text }]}>{searchResult.displayName}</Text>
-                <Text style={[styles.friendUsername, { color: colors.textSecondary }]}>@{searchResult.username}</Text>
-              </View>
-              <TouchableOpacity
-                style={[styles.sendRequestBtn, { backgroundColor: colors.primary }]}
-                onPress={() => handleSendRequest(searchResult.uid)}
-                disabled={loading}
-              >
-                <Text style={[styles.sendRequestBtnText, { color: colors.background }]}>
-                  {loading ? '...' : 'Add Friend'}
-                </Text>
-              </TouchableOpacity>
+          {/* Arama Sonuçları */}
+          {searchResults.length > 0 && (
+            <View style={{ gap: 12 }}>
+              {searchResults.map(user => (
+                <View key={user.uid} style={[styles.searchResultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                  <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
+                    {user.avatar ? (
+                      <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                    ) : (
+                      <Text style={[styles.avatarText, { color: colors.background }]}>{user.username.charAt(0).toUpperCase()}</Text>
+                    )}
+                  </View>
+                  <View style={styles.friendInfo}>
+                    <Text style={[styles.friendName, { color: colors.text }]}>@{user.username}</Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={[styles.sendRequestBtn, { backgroundColor: colors.primary }]}
+                    onPress={() => handleSendRequest(user.uid)}
+                    disabled={loading}
+                  >
+                    <Text style={[styles.sendRequestBtnText, { color: colors.background }]}>
+                      {loading ? '...' : 'Add Friend'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              ))}
             </View>
           )}
 
-          {searchResult === null && searchQuery && !searching && (
+          {searchResults.length === 0 && searchQuery && !searching && (
             <View style={styles.emptyState}>
               <Text style={[styles.emptyText, { color: colors.textSecondary }]}>User not found</Text>
             </View>

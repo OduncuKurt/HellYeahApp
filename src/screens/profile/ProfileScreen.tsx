@@ -115,7 +115,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        cameraFacing: 'front',  // Profil fotoğrafı için ön kamera
+        cameraFacing: 'front',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -124,7 +124,8 @@ export default function ProfileScreen({ navigation, route }: Props) {
       if (!result.canceled && result.assets[0]) {
         let imageUri = result.assets[0].uri;
 
-        // iOS ön kamera ayna sorunu: çekimden sonra yatay flip uygula
+        // iOS'ta ön kamera varsayılan olarak görüntüyü ters kaydeder (asimetrik yapar).
+        // Kullanıcının preview'da gördüğü gibi kalması için yatay çeviriyoruz.
         if (Platform.OS === 'ios') {
           const flipped = await ImageManipulator.manipulateAsync(
             imageUri,

@@ -153,7 +153,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return { success: true };
     } catch (error: any) {
       console.error('Login error:', error);
-      return { success: false, error: error.message };
+      
+      let errorMessage = 'Giriş yapılamadı. Lütfen tekrar deneyin.';
+      if (
+        error.code === 'auth/invalid-login-credentials' || 
+        error.code === 'auth/invalid-credential' || 
+        error.code === 'auth/wrong-password' || 
+        error.code === 'auth/user-not-found'
+      ) {
+        errorMessage = 'E-posta veya şifre hatalı.';
+      } else if (error.code === 'auth/too-many-requests') {
+        errorMessage = 'Çok fazla başarısız deneme yapıldı. Lütfen daha sonra tekrar deneyin.';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Geçersiz bir e-posta adresi girdiniz.';
+      } else if (error.message) {
+        // Diğer hatalar için (Firebase yazısını temizleyerek)
+        errorMessage = error.message.replace('Firebase: ', '');
+      }
+
+      return { success: false, error: errorMessage };
     } finally {
       setLoading(false);
     }

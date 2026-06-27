@@ -1,5 +1,6 @@
 import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
+import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import React, { useCallback, useState } from 'react';
@@ -74,21 +75,41 @@ export default function FeedScreen({ navigation }: Props) {
     }
 
     try {
+      // iOS: action sheet kapanma animasyonunu bekle (hata olmaması için Profile'daki gibi eklendi)
+      await new Promise(resolve => setTimeout(resolve, 350));
+
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
         allowsEditing: false,
         quality: 0.7,
+        exif: true,
       });
 
       if (!result.canceled && result.assets[0]) {
+        let imageUri = result.assets[0].uri;
+        
+        // EXIF verisinden ön kamera (selfie) kullanılıp kullanılmadığını tespit et
+        const exif = result.assets[0].exif;
+        const isFrontCamera = exif?.LensModel?.toLowerCase().includes('front') || false;
+
+        // Eğer iOS'taysa ve ön kamerayla çekildiyse, asimetri (ters dönme) olmaması için ayna efekti uygula
+        if (Platform.OS === 'ios' && isFrontCamera) {
+          const flipped = await ImageManipulator.manipulateAsync(
+            imageUri,
+            [{ flip: ImageManipulator.FlipType.Horizontal }],
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+          );
+          imageUri = flipped.uri;
+        }
+
         // Show Guinness selection dialog
         showCustomConfirm(
           'Beer Type',
           'Is this a Guinness beer? 🍀',
           'Yes',
           'No',
-          () => uploadBeer(result.assets[0].uri, true),
-          () => uploadBeer(result.assets[0].uri, false)
+          () => uploadBeer(imageUri, true),
+          () => uploadBeer(imageUri, false)
         );
       }
     } catch (error) {
