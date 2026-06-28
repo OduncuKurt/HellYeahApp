@@ -184,18 +184,60 @@ export default function FeedScreen({ navigation }: Props) {
         <Image source={{ uri: item.photoUrl }} style={styles.beerPhotoImage} />
       </View>
 
-      <View style={styles.cardFooter}>
-        {item.reactions && Object.keys(item.reactions).length > 0 && (
-          <Text style={[styles.reactionsText, { color: colors.text }]}>
-            {Object.keys(item.reactions).length} reactions
-          </Text>
-        )}
-        {item.comments && item.comments.length > 0 && (
-          <Text style={[styles.commentsText, { color: colors.textSecondary }]}>
-            {item.comments.length} {item.comments.length === 1 ? 'comment' : 'comments'}
-          </Text>
-        )}
-      </View>
+      {/* Reactions + Comments footer */}
+      {((item.reactions && Object.keys(item.reactions).length > 0) ||
+        (item.comments && item.comments.length > 0)) && (
+        <View style={[styles.cardFooter, { borderTopColor: colors.border }]}>
+
+          {/* Reactions — her benzersiz emojiyi sayısıyla göster */}
+          {item.reactions && Object.keys(item.reactions).length > 0 && (() => {
+            const counts: Record<string, number> = {};
+            Object.values(item.reactions!).forEach((emoji) => {
+              counts[emoji] = (counts[emoji] || 0) + 1;
+            });
+            return (
+              <View style={styles.reactionsRow}>
+                {Object.entries(counts).map(([emoji, count]) => (
+                  <View
+                    key={emoji}
+                    style={[styles.reactionBadge, { backgroundColor: theme === 'dark' ? '#2C2C2C' : '#F3F4F6' }]}
+                  >
+                    <Text style={styles.reactionBadgeEmoji}>{emoji}</Text>
+                    <Text style={[styles.reactionBadgeCount, { color: colors.text }]}>{count}</Text>
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
+
+          {/* Son yorum */}
+          {item.comments && item.comments.length > 0 && (() => {
+            const last = item.comments![item.comments!.length - 1];
+            return (
+              <View style={styles.lastCommentRow}>
+                <View style={[styles.commentDot, { backgroundColor: colors.primary }]}>
+                  <Text style={[styles.commentDotText, { color: colors.background }]}>
+                    {last.userName.charAt(0).toUpperCase()}
+                  </Text>
+                </View>
+                <View style={styles.lastCommentContent}>
+                  <Text style={[styles.lastCommentUser, { color: colors.text }]} numberOfLines={1}>
+                    {last.userName}
+                    <Text style={[styles.lastCommentText, { color: colors.textSecondary }]}>
+                      {'  '}{last.text}
+                    </Text>
+                  </Text>
+                  {item.comments!.length > 1 && (
+                    <Text style={[styles.moreComments, { color: colors.textSecondary }]}>
+                      +{item.comments!.length - 1} yorum daha
+                    </Text>
+                  )}
+                </View>
+              </View>
+            );
+          })()}
+        </View>
+      )}
     </TouchableOpacity>
   );
 
@@ -394,18 +436,73 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   cardFooter: {
-    padding: 16,
-    flexDirection: 'row',
-    gap: 16,
+    paddingHorizontal: 16,
+    paddingTop: 10,
+    paddingBottom: 14,
+    gap: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: '#E0E0E0',
   },
-  reactionsText: {
+  /* Reaction badges */
+  reactionsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  reactionBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    gap: 4,
+    backgroundColor: '#F3F4F6',
+  },
+  reactionBadgeEmoji: {
+    fontSize: 15,
+  },
+  reactionBadgeCount: {
     fontSize: 13,
-    fontWeight: '500',
+    fontWeight: '700',
     color: '#000',
   },
-  commentsText: {
+  /* Last comment */
+  lastCommentRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  commentDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#000',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 1,
+  },
+  commentDotText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#FFF',
+  },
+  lastCommentContent: {
+    flex: 1,
+  },
+  lastCommentUser: {
     fontSize: 13,
+    fontWeight: '700',
+    color: '#000',
+  },
+  lastCommentText: {
+    fontSize: 13,
+    fontWeight: '400',
     color: '#666',
+  },
+  moreComments: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
   },
   emptyState: {
     flex: 1,

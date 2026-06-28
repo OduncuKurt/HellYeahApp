@@ -315,7 +315,10 @@ export default function RegisterScreen({ navigation }: Props) {
     if (!result.success) {
       showError('Kayıt Hatası', result.error || 'Kayıt oluşturulamadı.');
     } else {
-      showSuccess('Başarılı', 'Hesabınız oluşturuldu!');
+      showSuccess(
+        'Hesap Oluşturuldu! 🍺',
+        `${email} adresine doğrulama emaili gönderdik. Email kutunu kontrol et ve linke tıkla!`
+      );
     }
   };
 

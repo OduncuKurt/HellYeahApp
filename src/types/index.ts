@@ -54,6 +54,7 @@ export interface AuthContextType {
   user: User | null;
   loading: boolean;
   initializing: boolean;
+  emailVerified: boolean;
   register: (
     email: string,
     password: string,
@@ -63,6 +64,7 @@ export interface AuthContextType {
   login: (email: string, password: string) => Promise<AuthResult>;
   logout: () => Promise<AuthResult>;
   resetPassword: (email: string) => Promise<AuthResult>;
+  resendVerificationEmail: () => Promise<AuthResult>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
   refreshUserData: () => Promise<void>;
 }
@@ -77,6 +79,7 @@ export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
   ForgotPassword: undefined;
+  EmailVerification: undefined;
 };
 
 export type MainStackParamList = {

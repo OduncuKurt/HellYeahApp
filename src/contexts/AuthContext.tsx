@@ -1,8 +1,11 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
+    ActionCodeSettings,
     createUserWithEmailAndPassword,
     User as FirebaseUser,
     onAuthStateChanged,
+    reload,
+    sendEmailVerification,
     sendPasswordResetEmail,
     signInWithEmailAndPassword,
     signOut,
@@ -31,11 +34,20 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [initializing, setInitializing] = useState<boolean>(true);
+  const [emailVerified, setEmailVerified] = useState<boolean>(false);
+
+  // Hell Yeah markasına uygun action code settings
+  const actionCodeSettings: ActionCodeSettings = {
+    url: 'https://hell-yeah-fd32f.firebaseapp.com/__/auth/action',
+    handleCodeInApp: false,
+  };
 
   useEffect(() => {
     // Firebase Auth state listener
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser: FirebaseUser | null) => {
       if (firebaseUser) {
+        // Email doğrulama durumunu güncelle
+        setEmailVerified(firebaseUser.emailVerified);
         // Kullanıcı giriş yapmış
         const userData = await getUserData(firebaseUser.uid);
         setUser({
@@ -53,6 +65,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         });
       } else {
         // Kullanıcı çıkış yapmış
+        setEmailVerified(false);
         setUser(null);
       }
 
@@ -109,6 +122,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Display name güncelle
       await updateProfile(userCredential.user, { displayName });
+
+      // Email doğrulama emaili gönder (Hell Yeah markasına uygun)
+      try {
+        await sendEmailVerification(userCredential.user, actionCodeSettings);
+      } catch (verifyError) {
+        // Email gönderilemese bile kayıt tamamlansın
+        console.warn('Email verification send failed:', verifyError);
+      }
 
       // Username'i kaydet (lowercase olarak)
       const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
@@ -196,11 +217,36 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   // Şifre sıfırlama
   const resetPassword = async (email: string): Promise<AuthResult> => {
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
       return { success: true };
     } catch (error: any) {
       console.error('Reset password error:', error);
       return { success: false, error: error.message };
+    }
+  };
+
+  // Doğrulama emailini tekrar gönder
+  const resendVerificationEmail = async (): Promise<AuthResult> => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) {
+        return { success: false, error: 'Kullanıcı oturumu bulunamadı.' };
+      }
+      // Önce en güncel durumu al
+      await reload(currentUser);
+      if (currentUser.emailVerified) {
+        setEmailVerified(true);
+        return { success: true };
+      }
+      await sendEmailVerification(currentUser, actionCodeSettings);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Resend verification error:', error);
+      // Firebase rate limit hatası
+      if (error.code === 'auth/too-many-requests') {
+        return { success: false, error: 'Çok fazla deneme yapıldı. Lütfen birkaç dakika bekleyin.' };
+      }
+      return { success: false, error: 'Email gönderilemedi. Lütfen tekrar deneyin.' };
     }
   };
 
@@ -215,14 +261,30 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Email doğrulama durumunu manuel kontrol et (polling için)
+  const checkEmailVerified = async (): Promise<boolean> => {
+    try {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return false;
+      await reload(currentUser);
+      const verified = currentUser.emailVerified;
+      setEmailVerified(verified);
+      return verified;
+    } catch {
+      return false;
+    }
+  };
+
   const value: AuthContextType = {
     user,
     loading,
     initializing,
+    emailVerified,
     register,
     login,
     logout,
     resetPassword,
+    resendVerificationEmail,
     checkUsernameAvailability,
     refreshUserData,
   };

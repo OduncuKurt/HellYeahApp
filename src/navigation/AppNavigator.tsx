@@ -10,6 +10,7 @@ import { useTheme } from '../contexts/ThemeContext';
 import { AuthStackParamList, MainStackParamList } from '../types';
 
 // Auth Screens
+import EmailVerificationScreen from '../screens/auth/EmailVerificationScreen';
 import ForgotPasswordScreen from '../screens/auth/ForgotPasswordScreen';
 import LoginScreen from '../screens/auth/LoginScreen';
 import RegisterScreen from '../screens/auth/RegisterScreen';
@@ -37,6 +38,7 @@ function AuthStackNavigator() {
       <AuthStack.Screen name="Login" component={LoginScreen} />
       <AuthStack.Screen name="Register" component={RegisterScreen} />
       <AuthStack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
+      <AuthStack.Screen name="EmailVerification" component={EmailVerificationScreen} />
     </AuthStack.Navigator>
   );
 }
@@ -76,7 +78,7 @@ const linking: LinkingOptions<any> = {
 
 // Ana Navigator
 export default function AppNavigator() {
-  const { user, initializing } = useAuth();
+  const { user, initializing, emailVerified } = useAuth();
   const { theme, colors } = useTheme();
 
   // İlk yüklenme sırasında loading göster
@@ -90,9 +92,21 @@ export default function AppNavigator() {
 
   const navigationTheme = theme === 'dark' ? DarkTheme : DefaultTheme;
 
+  // Email doğrulanmamışsa verification ekranında tut
+  const showVerification = user && !emailVerified;
+
   return (
     <NavigationContainer linking={linking} theme={navigationTheme}>
-      {user ? <MainStackNavigator /> : <AuthStackNavigator />}
+      {!user ? (
+        <AuthStackNavigator />
+      ) : showVerification ? (
+        // Email doğrulanmamış: kendi stack içinde EmailVerification göster
+        <AuthStack.Navigator screenOptions={{ headerShown: false, cardStyle: { backgroundColor: colors.background } }}>
+          <AuthStack.Screen name="EmailVerification" component={EmailVerificationScreen} />
+        </AuthStack.Navigator>
+      ) : (
+        <MainStackNavigator />
+      )}
     </NavigationContainer>
   );
 }
