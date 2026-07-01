@@ -63,3 +63,9 @@ GoogleService-Info.plist
 # Environment Variables
 .env
 .vercel
+
+
+# CLAUDE
+reports/
+.claude/
+.agent/
