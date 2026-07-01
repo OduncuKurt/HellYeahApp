@@ -11,7 +11,8 @@ export const addBeer = async (
   userName: string,
   userAvatar: string,
   photoUri: string,
-  isGuinness: boolean = false
+  isGuinness: boolean = false,
+  location?: string
 ): Promise<{ success: boolean; beerId?: string; error?: string }> => {
   try {
     // 1. Fotoğrafı Firebase Storage'a yükle
@@ -44,6 +45,7 @@ export const addBeer = async (
       timestamp,
       year,
       isGuinness,
+      ...(location ? { location } : {}),
       reactions: {},
       comments: [],
     };

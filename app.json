@@ -23,8 +23,9 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.hellyeahapp.rn",
       "infoPlist": {
-        "NSCameraUsageDescription": "Bu uygulama fotoğraf çekmek için kameraya erişim gerektirir.",
-        "NSPhotoLibraryUsageDescription": "Bu uygulama fotoğraf seçmek için galeriye erişim gerektirir."
+        "NSCameraUsageDescription": "This app requires camera access to take photos.",
+        "NSPhotoLibraryUsageDescription": "This app requires gallery access to select photos.",
+        "NSLocationWhenInUseUsageDescription": "Your location is used to tag where you had your beer."
       }
     },
     "android": {
@@ -33,8 +34,9 @@
         "android.permission.CAMERA",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.RECORD_AUDIO",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.ACCESS_COARSE_LOCATION"
       ]
     },
     "web": {
@@ -61,6 +63,12 @@
         "expo-image-picker",
         {
           "photosPermission": "Galeriden fotoğraf seçmek için izin gereklidir."
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Your location is used to tag where you had your beer."
         }
       ],
       "expo-asset",

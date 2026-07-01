@@ -34,7 +34,8 @@ export interface Beer {
   photoUrl: string;
   timestamp: number;
   year: number; // 2025, 2026, etc.
-  isGuinness: boolean; // NEW: Is this a Guinness beer?
+  isGuinness: boolean; // Is this a Guinness beer?
+  location?: string; // e.g. "Kadıköy, İstanbul"
   reactions?: { [userId: string]: string }; // { "userId": "🍻" }
   comments?: Comment[];
 }

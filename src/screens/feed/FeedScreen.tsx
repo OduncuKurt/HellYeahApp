@@ -2,8 +2,9 @@ import { useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { StatusBar } from 'expo-status-bar';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -37,6 +38,8 @@ export default function FeedScreen({ navigation }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  // Cache location so we only fetch once per session
+  const locationCache = useRef<string | undefined>(undefined);
 
   const loadFeed = async (): Promise<void> => {
     if (!user) return;
@@ -63,6 +66,63 @@ export default function FeedScreen({ navigation }: Props) {
   const handleRefresh = (): void => {
     setRefreshing(true);
     loadFeed();
+  };
+
+  /**
+   * Optimized location fetch:
+   * - Asks permission once, caches result in-memory for the session
+   * - Uses lastKnownPosition first (instant) then tries current (accurate)
+   * - Timeout 4s so it never blocks the photo flow
+   * - Returns "District, City" or undefined
+   */
+  const getLocation = async (): Promise<string | undefined> => {
+    try {
+      // Return cached value if available
+      if (locationCache.current !== undefined) return locationCache.current || undefined;
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') {
+        locationCache.current = '';
+        return undefined;
+      }
+
+      // Try last known position first (instant, no battery cost)
+      let coords: Location.LocationObjectCoords | null = null;
+      const last = await Location.getLastKnownPositionAsync();
+      if (last) {
+        coords = last.coords;
+      } else {
+        // Fall back to current position with 4s timeout
+        const current = await Promise.race([
+          Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 4000)),
+        ]);
+        if (current) coords = (current as Location.LocationObject).coords;
+      }
+
+      if (!coords) {
+        locationCache.current = '';
+        return undefined;
+      }
+
+      // Reverse geocode to get district + city
+      const [place] = await Location.reverseGeocodeAsync(
+        { latitude: coords.latitude, longitude: coords.longitude },
+        { useGoogleMaps: false }
+      );
+
+      const district = place.district || place.subregion || place.city || '';
+      const city = place.city || place.region || '';
+      const locationStr = district && city && district !== city
+        ? `${district}, ${city}`
+        : city || district || '';
+
+      locationCache.current = locationStr;
+      return locationStr || undefined;
+    } catch {
+      locationCache.current = '';
+      return undefined;
+    }
   };
 
   const handleAddBeer = async (): Promise<void> => {
@@ -102,14 +162,17 @@ export default function FeedScreen({ navigation }: Props) {
           imageUri = flipped.uri;
         }
 
+        // Fetch location in parallel while user reads the dialog
+        const locationPromise = getLocation();
+
         // Show Guinness selection dialog
         showCustomConfirm(
           'Beer Type',
           'Is this a Guinness beer? 🍀',
           'Yes',
           'No',
-          () => uploadBeer(imageUri, true),
-          () => uploadBeer(imageUri, false)
+          async () => uploadBeer(imageUri, true, await locationPromise),
+          async () => uploadBeer(imageUri, false, await locationPromise)
         );
       }
     } catch (error) {
@@ -118,7 +181,7 @@ export default function FeedScreen({ navigation }: Props) {
     }
   };
 
-  const uploadBeer = async (photoUri: string, isGuinness: boolean): Promise<void> => {
+  const uploadBeer = async (photoUri: string, isGuinness: boolean, location?: string): Promise<void> => {
     if (!user) return;
     
     setUploading(true);
@@ -127,7 +190,8 @@ export default function FeedScreen({ navigation }: Props) {
       user.displayName,
       user.avatar,
       photoUri,
-      isGuinness
+      isGuinness,
+      location
     );
     setUploading(false);
 
@@ -175,7 +239,15 @@ export default function FeedScreen({ navigation }: Props) {
               <Text style={[styles.userName, { color: colors.text }]}>{item.userName}</Text>
               {isGuinness(item) && <Text style={{ fontSize: 16 }}>🍀</Text>}
             </View>
-            <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{formatTime(item.timestamp)}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Text style={[styles.timestamp, { color: colors.textSecondary }]}>{formatTime(item.timestamp)}</Text>
+              {item.location ? (
+                <>
+                  <Text style={{ color: colors.textSecondary, fontSize: 11 }}>·</Text>
+                  <Text style={[styles.locationText, { color: colors.textSecondary }]}>📍 {item.location}</Text>
+                </>
+              ) : null}
+            </View>
           </View>
         </View>
       </View>
@@ -421,6 +493,11 @@ const styles = StyleSheet.create({
   },
   timestamp: {
     fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  locationText: {
+    fontSize: 11,
     color: '#999',
     marginTop: 2,
   },
