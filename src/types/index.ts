@@ -50,6 +50,13 @@ export interface Comment {
   timestamp: number;
 }
 
+// Pagination Types
+export interface PaginatedBeers {
+  beers: Beer[];
+  lastTimestamp: number | null;
+  hasMore: boolean;
+}
+
 // Auth Types
 export interface AuthContextType {
   user: User | null;

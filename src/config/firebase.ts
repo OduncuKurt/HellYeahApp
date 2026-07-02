@@ -4,15 +4,24 @@ import { getReactNativePersistence } from 'firebase/auth/react-native';
 import { getDatabase } from 'firebase/database';
 import { getStorage } from 'firebase/storage';
 import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import {
+  FIREBASE_API_KEY,
+  FIREBASE_AUTH_DOMAIN,
+  FIREBASE_DATABASE_URL,
+  FIREBASE_PROJECT_ID,
+  FIREBASE_STORAGE_BUCKET,
+  FIREBASE_MESSAGING_SENDER_ID,
+  FIREBASE_APP_ID,
+} from '@env';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCA8VkKdG-gstNeUByWeFI4CAV_HXYLgkQ",
-  authDomain: "hell-yeah-fd32f.firebaseapp.com",
-  databaseURL: "https://hell-yeah-fd32f-default-rtdb.firebaseio.com",
-  projectId: "hell-yeah-fd32f",
-  storageBucket: "hell-yeah-fd32f.firebasestorage.app",
-  messagingSenderId: "759199260044",
-  appId: "1:759199260044:android:2e53863fc7a35cb9228aa9"
+  apiKey: FIREBASE_API_KEY,
+  authDomain: FIREBASE_AUTH_DOMAIN,
+  databaseURL: FIREBASE_DATABASE_URL,
+  projectId: FIREBASE_PROJECT_ID,
+  storageBucket: FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: FIREBASE_MESSAGING_SENDER_ID,
+  appId: FIREBASE_APP_ID,
 };
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];

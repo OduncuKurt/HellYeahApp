@@ -1,7 +1,29 @@
-import { ref as dbRef, get, increment, push, set } from 'firebase/database';
+import { ref as dbRef, get, increment, push, set, query, orderByChild, equalTo } from 'firebase/database';
 import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { database, storage } from '../config/firebase';
-import { Beer, Comment } from '../types';
+import { Beer, Comment, PaginatedBeers } from '../types';
+
+export const FEED_PAGE_SIZE = 20;
+
+/**
+ * Beer verisini parse eder (comments object → array dönüşümü dahil)
+ */
+const parseBeerData = (beerId: string, beerData: any): Beer => {
+  let comments: Comment[] = [];
+  if (beerData.comments) {
+    comments = Object.keys(beerData.comments).map((commentId) => ({
+      id: commentId,
+      ...beerData.comments[commentId],
+    }));
+    comments.sort((a, b) => b.timestamp - a.timestamp);
+  }
+  return {
+    id: beerId,
+    ...beerData,
+    isGuinness: beerData.isGuinness || false,
+    comments,
+  };
+};
 
 /**
  * Yeni bira ekler (fotoğraf ile)
@@ -78,90 +100,101 @@ export const addBeer = async (
 
 /**
  * Arkadaşlarının biralarını getirir (feed için)
+ * Server-side filtreleme + cursor-based pagination
  */
-export const getFriendsFeed = async (userId: string, friendIds: string[]): Promise<Beer[]> => {
+export const getFriendsFeed = async (
+  userId: string,
+  friendIds: string[],
+  pageSize: number = FEED_PAGE_SIZE,
+  beforeTimestamp?: number
+): Promise<PaginatedBeers> => {
   try {
-    const beersRef = dbRef(database, 'beers');
-    const snapshot = await get(beersRef);
-
-    if (!snapshot.exists()) {
-      return [];
-    }
-
-    const beersData = snapshot.val();
     const allUserIds = [userId, ...friendIds];
 
-    const beers: Beer[] = Object.keys(beersData)
-      .filter((beerId) => allUserIds.includes(beersData[beerId].userId))
-      .map((beerId) => {
-        const beerData = beersData[beerId];
-        
-        // Convert comments object to array if exists
-        let comments: Comment[] = [];
-        if (beerData.comments) {
-          comments = Object.keys(beerData.comments).map((commentId) => ({
-            id: commentId,
-            ...beerData.comments[commentId],
-          }));
-          comments.sort((a, b) => b.timestamp - a.timestamp);
-        }
-        
-        return {
-          id: beerId,
-          ...beerData,
-          isGuinness: beerData.isGuinness || false, // Backward compatibility
-          comments,
-        };
-      });
+    // Her kullanıcı için ayrı sorgu — paralel çalışır (server-side filtered)
+    const queryPromises = allUserIds.map(async (uid) => {
+      const beersQuery = query(
+        dbRef(database, 'beers'),
+        orderByChild('userId'),
+        equalTo(uid)
+      );
+      const snapshot = await get(beersQuery);
+      if (!snapshot.exists()) return [];
+
+      const beersData = snapshot.val();
+      return Object.keys(beersData).map((beerId) =>
+        parseBeerData(beerId, beersData[beerId])
+      );
+    });
+
+    const results = await Promise.all(queryPromises);
+    let allBeers = results.flat();
 
     // Zamana göre sırala (yeniden eskiye)
-    return beers.sort((a, b) => b.timestamp - a.timestamp);
+    allBeers.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Cursor-based pagination
+    if (beforeTimestamp) {
+      allBeers = allBeers.filter((b) => b.timestamp < beforeTimestamp);
+    }
+
+    const hasMore = allBeers.length > pageSize;
+    const paginatedBeers = allBeers.slice(0, pageSize);
+    const lastTimestamp = paginatedBeers.length > 0
+      ? paginatedBeers[paginatedBeers.length - 1].timestamp
+      : null;
+
+    return { beers: paginatedBeers, lastTimestamp, hasMore };
   } catch (error) {
     console.error('Get friends feed error:', error);
-    return [];
+    return { beers: [], lastTimestamp: null, hasMore: false };
   }
 };
 
 /**
  * Kullanıcının biralarını getirir
+ * Server-side filtreleme + cursor-based pagination
  */
-export const getUserBeers = async (userId: string): Promise<Beer[]> => {
+export const getUserBeers = async (
+  userId: string,
+  pageSize: number = FEED_PAGE_SIZE,
+  beforeTimestamp?: number
+): Promise<PaginatedBeers> => {
   try {
-    const beersRef = dbRef(database, 'beers');
-    const snapshot = await get(beersRef);
+    // Server-side filter by userId (sadece bu kullanıcının biraları gelir)
+    const beersQuery = query(
+      dbRef(database, 'beers'),
+      orderByChild('userId'),
+      equalTo(userId)
+    );
+    const snapshot = await get(beersQuery);
 
     if (!snapshot.exists()) {
-      return [];
+      return { beers: [], lastTimestamp: null, hasMore: false };
     }
 
     const beersData = snapshot.val();
-    const beers: Beer[] = Object.keys(beersData)
-      .filter((beerId) => beersData[beerId].userId === userId)
-      .map((beerId) => {
-        const beerData = beersData[beerId];
-        
-        // Convert comments object to array if exists
-        let comments: Comment[] = [];
-        if (beerData.comments) {
-          comments = Object.keys(beerData.comments).map((commentId) => ({
-            id: commentId,
-            ...beerData.comments[commentId],
-          }));
-          comments.sort((a, b) => b.timestamp - a.timestamp);
-        }
-        
-        return {
-          id: beerId,
-          ...beerData,
-          isGuinness: beerData.isGuinness || false, // Backward compatibility
-          comments,
-        };
-      });
+    let beers: Beer[] = Object.keys(beersData)
+      .map((beerId) => parseBeerData(beerId, beersData[beerId]));
 
-    return beers.sort((a, b) => b.timestamp - a.timestamp);
+    // Zamana göre sırala (yeniden eskiye)
+    beers.sort((a, b) => b.timestamp - a.timestamp);
+
+    // Cursor-based pagination
+    if (beforeTimestamp) {
+      beers = beers.filter((b) => b.timestamp < beforeTimestamp);
+    }
+
+    const hasMore = beers.length > pageSize;
+    const paginatedBeers = beers.slice(0, pageSize);
+    const lastTimestamp = paginatedBeers.length > 0
+      ? paginatedBeers[paginatedBeers.length - 1].timestamp
+      : null;
+
+    return { beers: paginatedBeers, lastTimestamp, hasMore };
   } catch (error) {
     console.error('Get user beers error:', error);
-    return [];
+    return { beers: [], lastTimestamp: null, hasMore: false };
   }
 };
 

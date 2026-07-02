@@ -38,33 +38,63 @@ export default function FeedScreen({ navigation }: Props) {
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
   // Cache location so we only fetch once per session
   const locationCache = useRef<string | undefined>(undefined);
+  const lastTimestampRef = useRef<number | null>(null);
+  const friendIdsRef = useRef<string[]>([]);
 
-  const loadFeed = async (): Promise<void> => {
+  const loadFeed = async (loadMore: boolean = false): Promise<void> => {
     if (!user) return;
 
     try {
-      const friends = await getFriends(user.uid);
-      const friendIds = friends.map((f) => f.uid);
-      const feedBeers = await getFriendsFeed(user.uid, friendIds);
-      setBeers(feedBeers);
+      if (loadMore) {
+        setLoadingMore(true);
+      }
+
+      // Arkadaş listesini sadece ilk yüklemede çek
+      if (!loadMore) {
+        const friends = await getFriends(user.uid);
+        friendIdsRef.current = friends.map((f) => f.uid);
+      }
+
+      const result = await getFriendsFeed(
+        user.uid,
+        friendIdsRef.current,
+        undefined,
+        loadMore ? lastTimestampRef.current ?? undefined : undefined
+      );
+
+      if (loadMore) {
+        setBeers((prev) => [...prev, ...result.beers]);
+      } else {
+        setBeers(result.beers);
+      }
+
+      lastTimestampRef.current = result.lastTimestamp;
+      setHasMore(result.hasMore);
     } catch (error) {
       console.error('Load feed error:', error);
     } finally {
       setLoading(false);
       setRefreshing(false);
+      setLoadingMore(false);
     }
   };
 
   useFocusEffect(
     useCallback(() => {
+      lastTimestampRef.current = null;
+      setHasMore(true);
       loadFeed();
     }, [user])
   );
 
   const handleRefresh = (): void => {
     setRefreshing(true);
+    lastTimestampRef.current = null;
+    setHasMore(true);
     loadFeed();
   };
 
@@ -106,10 +136,10 @@ export default function FeedScreen({ navigation }: Props) {
       }
 
       // Reverse geocode to get district + city
-      const [place] = await Location.reverseGeocodeAsync(
-        { latitude: coords.latitude, longitude: coords.longitude },
-        { useGoogleMaps: false }
-      );
+      const [place] = await Location.reverseGeocodeAsync({
+        latitude: coords.latitude,
+        longitude: coords.longitude,
+      });
 
       const district = place.district || place.subregion || place.city || '';
       const city = place.city || place.region || '';
@@ -370,6 +400,19 @@ export default function FeedScreen({ navigation }: Props) {
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} tintColor={colors.primary} />
         }
         style={Platform.OS === 'web' ? { height: '100%' } : undefined}
+        onEndReached={() => {
+          if (hasMore && !loadingMore && !loading) {
+            loadFeed(true);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null
+        }
       />
 
       {/* Add Button */}

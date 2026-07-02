@@ -5,7 +5,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { ref as dbRef, get, update } from 'firebase/database';
 import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -45,6 +45,9 @@ export default function ProfileScreen({ navigation, route }: Props) {
   const [beers, setBeers] = useState<Beer[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [uploadingPhoto, setUploadingPhoto] = useState<boolean>(false);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  const [hasMore, setHasMore] = useState<boolean>(true);
+  const lastTimestampRef = useRef<number | null>(null);
 
   useEffect(() => {
     loadProfile();
@@ -65,13 +68,41 @@ export default function ProfileScreen({ navigation, route }: Props) {
         });
       }
 
-      // Kullanıcının biralarını yükle
-      const userBeers = await getUserBeers(userId);
-      setBeers(userBeers);
+      // Pagination sıfırla ve ilk sayfa biraları yükle
+      lastTimestampRef.current = null;
+      setHasMore(true);
+      await loadBeers(false);
     } catch (error) {
       console.error('Load profile error:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadBeers = async (loadMore: boolean = false): Promise<void> => {
+    if (!userId) return;
+
+    try {
+      if (loadMore) setLoadingMore(true);
+
+      const result = await getUserBeers(
+        userId,
+        undefined,
+        loadMore ? lastTimestampRef.current ?? undefined : undefined
+      );
+
+      if (loadMore) {
+        setBeers((prev) => [...prev, ...result.beers]);
+      } else {
+        setBeers(result.beers);
+      }
+
+      lastTimestampRef.current = result.lastTimestamp;
+      setHasMore(result.hasMore);
+    } catch (error) {
+      console.error('Load beers error:', error);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -115,7 +146,6 @@ export default function ProfileScreen({ navigation, route }: Props) {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ['images'],
-        cameraFacing: 'front',
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
@@ -147,7 +177,7 @@ export default function ProfileScreen({ navigation, route }: Props) {
     try {
       const permResult = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
-      const hasAccess = permResult.status === 'granted' || permResult.status === 'limited';
+      const hasAccess = permResult.granted;
 
       if (!hasAccess) {
         if (!permResult.canAskAgain) {
@@ -396,6 +426,19 @@ export default function ProfileScreen({ navigation, route }: Props) {
           </View>
         }
         style={Platform.OS === 'web' ? { height: '100%' } : undefined}
+        onEndReached={() => {
+          if (hasMore && !loadingMore) {
+            loadBeers(true);
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore ? (
+            <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+              <ActivityIndicator size="small" color={colors.primary} />
+            </View>
+          ) : null
+        }
       />
     </SafeAreaView>
   );

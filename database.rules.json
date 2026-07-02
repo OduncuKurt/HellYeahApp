@@ -5,8 +5,8 @@
         ".read": "auth != null",
         ".write": "$uid === auth.uid",
         "friends": {
-          ".read": "auth != null",
-          ".write": "auth != null"
+          ".read": "$uid === auth.uid",
+          ".write": "$uid === auth.uid"
         }
       }
     },
@@ -18,13 +18,14 @@
     },
     "beers": {
       ".read": "auth != null",
+      ".indexOn": ["userId", "timestamp"],
       "$beerId": {
-        ".write": "auth != null"
+        ".write": "auth != null && (!data.exists() ? newData.child('userId').val() === auth.uid : data.child('userId').val() === auth.uid)"
       }
     },
     "friendRequests": {
       "$toUserId": {
-        ".read": "$toUserId === auth.uid || auth != null",
+        ".read": "$toUserId === auth.uid",
         "$fromUserId": {
           ".write": "auth != null && ($fromUserId === auth.uid || $toUserId === auth.uid)"
         }
