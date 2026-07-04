@@ -1,5 +1,5 @@
-import { ref as dbRef, get, increment, push, set, query, orderByChild, equalTo } from 'firebase/database';
-import { getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { ref as dbRef, get, increment, push, update } from 'firebase/database';
+import { deleteObject, getDownloadURL, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { database, storage } from '../config/firebase';
 import { Beer, Comment, PaginatedBeers } from '../types';
 
@@ -27,6 +27,9 @@ const parseBeerData = (beerId: string, beerData: any): Beer => {
 
 /**
  * Yeni bira ekler (fotoğraf ile)
+ * 
+ * FIX C-01: Upload path artık `beers/${userId}/${filename}` — Storage rules ile uyumlu
+ * FIX H-05: Tüm DB yazmaları tek atomik `update()` ile yapılır
  */
 export const addBeer = async (
   userId: string,
@@ -41,7 +44,8 @@ export const addBeer = async (
     const timestamp = Date.now();
     const year = new Date().getFullYear();
     const filename = `${userId}_${timestamp}.jpg`;
-    const photoPath = `beers/${year}/${filename}`;
+    // FIX C-01: beers/${year}/ → beers/${userId}/ (Storage rules uyumu)
+    const photoPath = `beers/${userId}/${filename}`;
 
     // Fotoğraf blob'unu oluştur
     const response = await fetch(photoUri);
@@ -72,24 +76,19 @@ export const addBeer = async (
       comments: [],
     };
 
-    await set(newBeerRef, beerData);
+    // FIX H-05: Atomik fan-out update — bira + tüm sayaçlar tek işlemde
+    const updates: Record<string, any> = {
+      [`beers/${beerId}`]: beerData,
+      [`users/${userId}/totalBeers`]: increment(1),
+      [`users/${userId}/beersByYear/${year}`]: increment(1),
+    };
 
-    // 3. Kullanıcının toplam bira sayısını artır
-    const userTotalBeersRef = dbRef(database, `users/${userId}/totalBeers`);
-    await set(userTotalBeersRef, increment(1));
-
-    // 4. Kullanıcının yıllık bira sayısını artır
-    const userYearBeersRef = dbRef(database, `users/${userId}/beersByYear/${year}`);
-    await set(userYearBeersRef, increment(1));
-
-    // 5. Eğer Guinness ise, Guinness sayaçlarını artır
     if (isGuinness) {
-      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
-      await set(userTotalGuinnessRef, increment(1));
-      
-      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
-      await set(userYearGuinnessRef, increment(1));
+      updates[`users/${userId}/totalGuinnessBeers`] = increment(1);
+      updates[`users/${userId}/guinnessByYear/${year}`] = increment(1);
     }
+
+    await update(dbRef(database), updates);
 
     return { success: true, beerId };
   } catch (error: any) {
@@ -109,6 +108,7 @@ export const getFriendsFeed = async (
   beforeTimestamp?: number
 ): Promise<PaginatedBeers> => {
   try {
+    const { query, orderByChild, equalTo } = await import('firebase/database');
     const allUserIds = [userId, ...friendIds];
 
     // Her kullanıcı için ayrı sorgu — paralel çalışır (server-side filtered)
@@ -161,6 +161,7 @@ export const getUserBeers = async (
   beforeTimestamp?: number
 ): Promise<PaginatedBeers> => {
   try {
+    const { query, orderByChild, equalTo } = await import('firebase/database');
     // Server-side filter by userId (sadece bu kullanıcının biraları gelir)
     const beersQuery = query(
       dbRef(database, 'beers'),
@@ -237,6 +238,9 @@ export const getBeer = async (beerId: string): Promise<Beer | null> => {
 
 /**
  * Bira siler (sadece kendi birasını silebilir)
+ * 
+ * FIX H-05: Atomik update + Guinness sayaç düzeltmesi
+ * FIX H-05 somut bug: Guinness birası silinince totalGuinnessBeers ve guinnessByYear azaltılıyor
  */
 export const deleteBeer = async (
   beerId: string,
@@ -256,15 +260,31 @@ export const deleteBeer = async (
       return { success: false, error: 'Sadece kendi biranı silebilirsin.' };
     }
 
-    // Bira sil
-    await set(beerRef, null);
+    // FIX H-05: Atomik fan-out update — bira silme + tüm sayaçlar tek işlemde
+    const updates: Record<string, any> = {
+      [`beers/${beerId}`]: null,
+      [`users/${userId}/totalBeers`]: increment(-1),
+      [`users/${userId}/beersByYear/${beerData.year}`]: increment(-1),
+    };
 
-    // Sayaçları azalt
-    const userTotalBeersRef = dbRef(database, `users/${userId}/totalBeers`);
-    await set(userTotalBeersRef, increment(-1));
+    // FIX H-05 somut bug: Guinness birası silinince Guinness sayaçlarını da azalt
+    if (beerData.isGuinness) {
+      updates[`users/${userId}/totalGuinnessBeers`] = increment(-1);
+      updates[`users/${userId}/guinnessByYear/${beerData.year}`] = increment(-1);
+    }
 
-    const userYearBeersRef = dbRef(database, `users/${userId}/beersByYear/${beerData.year}`);
-    await set(userYearBeersRef, increment(-1));
+    await update(dbRef(database), updates);
+
+    // Storage görseli silmeye çalış (başarısız olursa ana akışı bozma)
+    if (beerData.photoUrl) {
+      try {
+        const photoRef = storageRef(storage, beerData.photoUrl);
+        await deleteObject(photoRef);
+      } catch (storageError) {
+        // Storage silme başarısız olabilir (URL formatı vs.) — loglayıp devam et
+        console.warn('Failed to delete beer photo from storage:', storageError);
+      }
+    }
 
     return { success: true };
   } catch (error: any) {
@@ -275,6 +295,8 @@ export const deleteBeer = async (
 
 /**
  * Biranın Guinness bayrağını toggle eder (sadece sahip)
+ * 
+ * FIX H-05: Atomik update — bayrak + sayaçlar tek işlemde
  */
 export const toggleGuinness = async (
   beerId: string,
@@ -297,28 +319,17 @@ export const toggleGuinness = async (
     // 2. Mevcut durumu al ve toggle et
     const currentIsGuinness = beerData.isGuinness || false;
     const newIsGuinness = !currentIsGuinness;
-
-    // 3. Bira bayrağını güncelle
-    await set(dbRef(database, `beers/${beerId}/isGuinness`), newIsGuinness);
-
-    // 4. Kullanıcı sayaçlarını güncelle
     const year = beerData.year;
-    
-    if (newIsGuinness) {
-      // Guinness olarak işaretlendi - artır
-      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
-      await set(userTotalGuinnessRef, increment(1));
-      
-      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
-      await set(userYearGuinnessRef, increment(1));
-    } else {
-      // Guinness işareti kaldırıldı - azalt
-      const userTotalGuinnessRef = dbRef(database, `users/${userId}/totalGuinnessBeers`);
-      await set(userTotalGuinnessRef, increment(-1));
-      
-      const userYearGuinnessRef = dbRef(database, `users/${userId}/guinnessByYear/${year}`);
-      await set(userYearGuinnessRef, increment(-1));
-    }
+    const delta = newIsGuinness ? 1 : -1;
+
+    // FIX H-05: Atomik update — bayrak + sayaçlar tek işlemde
+    const updates: Record<string, any> = {
+      [`beers/${beerId}/isGuinness`]: newIsGuinness,
+      [`users/${userId}/totalGuinnessBeers`]: increment(delta),
+      [`users/${userId}/guinnessByYear/${year}`]: increment(delta),
+    };
+
+    await update(dbRef(database), updates);
 
     return { success: true };
   } catch (error: any) {
@@ -338,8 +349,11 @@ export const addReaction = async (
   emoji: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const reactionRef = dbRef(database, `beers/${beerId}/reactions/${userId}`);
-    await set(reactionRef, emoji);
+    // C-03 fix sayesinde artık reactions/$userId altına doğrudan yazılabilir
+    const updates: Record<string, any> = {
+      [`beers/${beerId}/reactions/${userId}`]: emoji,
+    };
+    await update(dbRef(database), updates);
     return { success: true };
   } catch (error: any) {
     console.error('Add reaction error:', error);
@@ -355,8 +369,10 @@ export const removeReaction = async (
   userId: string
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    const reactionRef = dbRef(database, `beers/${beerId}/reactions/${userId}`);
-    await set(reactionRef, null);
+    const updates: Record<string, any> = {
+      [`beers/${beerId}/reactions/${userId}`]: null,
+    };
+    await update(dbRef(database), updates);
     return { success: true };
   } catch (error: any) {
     console.error('Remove reaction error:', error);
@@ -387,7 +403,11 @@ export const addComment = async (
       timestamp: Date.now(),
     };
 
-    await set(newCommentRef, commentData);
+    // C-03 fix sayesinde yorum alt-path'ine doğrudan yazılabilir
+    const updates: Record<string, any> = {
+      [`beers/${beerId}/comments/${commentId}`]: commentData,
+    };
+    await update(dbRef(database), updates);
     return { success: true, commentId };
   } catch (error: any) {
     console.error('Add comment error:', error);
@@ -416,7 +436,10 @@ export const deleteComment = async (
       return { success: false, error: 'Sadece kendi yorumunu silebilirsin.' };
     }
 
-    await set(commentRef, null);
+    const updates: Record<string, any> = {
+      [`beers/${beerId}/comments/${commentId}`]: null,
+    };
+    await update(dbRef(database), updates);
     return { success: true };
   } catch (error: any) {
     console.error('Delete comment error:', error);

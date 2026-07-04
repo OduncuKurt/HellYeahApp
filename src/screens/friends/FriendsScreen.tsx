@@ -273,7 +273,7 @@ export default function FriendsScreen({ navigation }: Props) {
                 <View key={user.uid} style={[styles.searchResultCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
                     {user.avatar ? (
-                      <Image source={{ uri: user.avatar }} style={styles.avatarImage} />
+                      <Image source={{ uri: user.avatar }} style={{ width: '100%', height: '100%', borderRadius: 20 }} />
                     ) : (
                       <Text style={[styles.avatarText, { color: colors.background }]}>{user.username.charAt(0).toUpperCase()}</Text>
                     )}

@@ -34,7 +34,13 @@ export default function LeaderboardScreen({ navigation }: Props) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const availableYears = [2024, 2025, 2026, 2027];
+  // FIX 4.3: Dinamik yıl listesi — sabit [2024,2025,2026,2027] yerine
+  // Mevcut yıldan 2 yıl geriye + 1 yıl ileriye dinamik oluştur
+  const currentYear = new Date().getFullYear();
+  const availableYears = Array.from(
+    { length: 4 },
+    (_, i) => currentYear - 2 + i
+  );
 
   useEffect(() => {
     loadLeaderboard();

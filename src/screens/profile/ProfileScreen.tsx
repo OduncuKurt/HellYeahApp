@@ -4,7 +4,7 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import { StatusBar } from 'expo-status-bar';
 import { ref as dbRef, get, update } from 'firebase/database';
-import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -149,20 +149,26 @@ export default function ProfileScreen({ navigation, route }: Props) {
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.8,
+        exif: true, // FIX 4.2: EXIF verisiyle kamera yönünü tespit et
       });
 
       if (!result.canceled && result.assets[0]) {
         let imageUri = result.assets[0].uri;
 
-        // iOS'ta ön kamera varsayılan olarak görüntüyü ters kaydeder (asimetrik yapar).
-        // Kullanıcının preview'da gördüğü gibi kalması için yatay çeviriyoruz.
+        // FIX 4.2: Sadece ön kamera (front camera) ile çekildiyse flip yap
+        // Arka kamera fotoğraflarını koşulsuz çevirmekten kaçın
         if (Platform.OS === 'ios') {
-          const flipped = await ImageManipulator.manipulateAsync(
-            imageUri,
-            [{ flip: ImageManipulator.FlipType.Horizontal }],
-            { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
-          );
-          imageUri = flipped.uri;
+          const exif = result.assets[0].exif;
+          const isFrontCamera = exif?.LensModel?.toLowerCase().includes('front') || false;
+          
+          if (isFrontCamera) {
+            const flipped = await ImageManipulator.manipulateAsync(
+              imageUri,
+              [{ flip: ImageManipulator.FlipType.Horizontal }],
+              { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+            );
+            imageUri = flipped.uri;
+          }
         }
 
         await uploadProfilePhoto(imageUri);
@@ -217,14 +223,17 @@ export default function ProfileScreen({ navigation, route }: Props) {
 
     setUploadingPhoto(true);
     try {
+      // Eski avatar URL'sini sakla (upload sonrası silmek için)
+      const oldAvatarUrl = profileUser?.avatar;
+
       // Fetch the image
       const response = await fetch(uri);
       const blob = await response.blob();
 
-      // Upload to Firebase Storage
+      // FIX C-02: Upload path artık avatars/${uid}/${filename} — Storage rules ile uyumlu
       const storage = getStorage();
       const filename = `profile_${currentUser.uid}_${Date.now()}.jpg`;
-      const imageRef = storageRef(storage, `avatars/${filename}`);
+      const imageRef = storageRef(storage, `avatars/${currentUser.uid}/${filename}`);
       
       await uploadBytes(imageRef, blob);
       const downloadURL = await getDownloadURL(imageRef);
@@ -234,6 +243,17 @@ export default function ProfileScreen({ navigation, route }: Props) {
       await update(userRef, {
         avatar: downloadURL,
       });
+
+      // FIX H-06: Eski avatar'ı sil (orphan dosya önleme)
+      if (oldAvatarUrl && oldAvatarUrl !== '🍺' && oldAvatarUrl.includes('firebase')) {
+        try {
+          const oldAvatarRef = storageRef(storage, oldAvatarUrl);
+          await deleteObject(oldAvatarRef);
+        } catch (deleteError) {
+          // Eski dosya silinemezse ana akışı bozma
+          console.warn('Failed to delete old avatar:', deleteError);
+        }
+      }
 
       // Refresh user data
       await refreshUserData();

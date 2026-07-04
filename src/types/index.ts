@@ -75,6 +75,7 @@ export interface AuthContextType {
   resendVerificationEmail: () => Promise<AuthResult>;
   checkUsernameAvailability: (username: string) => Promise<boolean>;
   refreshUserData: () => Promise<void>;
+  checkEmailVerified: () => Promise<boolean>;
 }
 
 export interface AuthResult {

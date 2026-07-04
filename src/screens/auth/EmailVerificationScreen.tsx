@@ -14,8 +14,6 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useModal } from '../../contexts/ModalContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { AuthStackParamList } from '../../types';
-import { auth } from '../../config/firebase';
-import { reload } from 'firebase/auth';
 
 type EmailVerificationScreenNavigationProp = StackNavigationProp<AuthStackParamList, 'EmailVerification'>;
 
@@ -26,10 +24,10 @@ interface Props {
 const RESEND_COOLDOWN = 60; // saniye
 const POLL_INTERVAL = 5000; // 5 saniyede bir kontrol
 
-export default function EmailVerificationScreen({ navigation }: Props) {
+export default function EmailVerificationScreen({ navigation: _navigation }: Props) {
   const { theme, colors } = useTheme();
   const { showError, showSuccess } = useModal();
-  const { user, logout, resendVerificationEmail, emailVerified } = useAuth();
+  const { user, logout, resendVerificationEmail, checkEmailVerified } = useAuth();
 
   const [cooldown, setCooldown] = useState<number>(0);
   const [checking, setChecking] = useState<boolean>(false);
@@ -76,19 +74,15 @@ export default function EmailVerificationScreen({ navigation }: Props) {
   }, [cooldown]);
 
   // Email doğrulama polling - her 5 saniyede kontrol et
+  // FIX C-06: AuthContext'ın checkEmailVerified'ını kullan (token refresh dahil)
   const checkVerification = useCallback(async () => {
     try {
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-      await reload(currentUser);
-      if (currentUser.emailVerified) {
-        // Doğrulandı! Auth state listener otomatik güncelleyecek
-        // Navigator otomatik olarak ana ekrana yönlendirecek
-      }
+      await checkEmailVerified();
+      // Doğrulandıysa auth state listener otomatik güncelleyecek
     } catch {
       // sessizce geç
     }
-  }, []);
+  }, [checkEmailVerified]);
 
   useEffect(() => {
     const interval = setInterval(checkVerification, POLL_INTERVAL);
@@ -115,20 +109,18 @@ export default function EmailVerificationScreen({ navigation }: Props) {
     }
   };
 
+  // FIX C-06: checkEmailVerified ile token refresh dahil kontrol
   const handleCheckNow = async () => {
     setChecking(true);
     try {
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        await reload(currentUser);
-        if (!currentUser.emailVerified) {
-          showError(
-            'Henüz Doğrulanmadı',
-            'Emailindeki linke henüz tıklamadın. Spam klasörünü de kontrol et!'
-          );
-        }
-        // Eğer doğrulandıysa auth state listener devreye girer
+      const verified = await checkEmailVerified();
+      if (!verified) {
+        showError(
+          'Henüz Doğrulanmadı',
+          'Emailindeki linke henüz tıklamadın. Spam klasörünü de kontrol et!'
+        );
       }
+      // Eğer doğrulandıysa auth state listener devreye girer
     } catch {
       showError('Hata', 'Kontrol edilemedi. Tekrar dene.');
     } finally {

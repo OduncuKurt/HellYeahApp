@@ -1,3 +1,17 @@
+/**
+ * ⚠️ SECURITY WARNING — BU DOSYA ÜRETİMDE KULLANILMAMALIDIR ⚠️
+ * 
+ * Bu migration scripti tüm kullanıcı verisini istemciye çeker — bu güvenli ve
+ * ölçeklenebilir bir yaklaşım DEĞİLDİR. Mobil bundle'da tutulmamalıdır.
+ * 
+ * Doğru yaklaşım:
+ * - Migration'ı Cloud Function veya Admin SDK ile server-side çalıştırın
+ * - Plaintext e-postayı RTDB anahtarında tutmayın (hash kullanın)
+ * - E-posta ile hesap bulma için Firebase Auth REST API kullanın
+ * 
+ * Bu dosya yalnızca geliştirme/test amacıyla referans olarak tutulmaktadır.
+ */
+
 import { ref as dbRef, get, set } from 'firebase/database';
 import { database } from '../config/firebase';
 import { encodeEmail } from './userService';

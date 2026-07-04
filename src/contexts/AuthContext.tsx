@@ -110,8 +110,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       setLoading(true);
 
+      // FIX 3.2: Username normalizasyonu ve doğrulaması
+      const normalizedUsername = username.trim().toLowerCase();
+      
+      // Format doğrulaması: sadece a-z, 0-9, nokta ve alt çizgi
+      if (!/^[a-z0-9._]+$/.test(normalizedUsername)) {
+        return { success: false, error: 'Kullanıcı adı sadece harf (a-z), rakam, nokta ve alt çizgi içerebilir.' };
+      }
+      if (normalizedUsername.length < 3 || normalizedUsername.length > 30) {
+        return { success: false, error: 'Kullanıcı adı 3-30 karakter arasında olmalıdır.' };
+      }
+
       // Username kontrolü
-      const isAvailable = await checkUsernameAvailability(username);
+      const isAvailable = await checkUsernameAvailability(normalizedUsername);
       if (!isAvailable) {
         return { success: false, error: 'Bu kullanıcı adı zaten alınmış.' };
       }
@@ -131,14 +142,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         console.warn('Email verification send failed:', verifyError);
       }
 
-      // Username'i kaydet (lowercase olarak)
-      const usernameRef = ref(database, `usernames/${username.toLowerCase()}`);
+      // Username'i kaydet (normalize edilmiş)
+      const usernameRef = ref(database, `usernames/${normalizedUsername}`);
       await set(usernameRef, uid);
 
       // Kullanıcı verisini database'e kaydet
       const userRef = ref(database, `users/${uid}`);
       const userData: Omit<User, 'uid' | 'email'> = {
-        username: username.toLowerCase(),
+        username: normalizedUsername,
         displayName,
         avatar: '🍺', // Default avatar
         totalBeers: 0,
@@ -262,6 +273,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Email doğrulama durumunu manuel kontrol et (polling için)
+  // FIX C-06: Token refresh ile doğrulama state'ini güvenilir şekilde güncelle
   const checkEmailVerified = async (): Promise<boolean> => {
     try {
       const currentUser = auth.currentUser;
@@ -269,6 +281,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       await reload(currentUser);
       const verified = currentUser.emailVerified;
       setEmailVerified(verified);
+      
+      // Doğrulandıysa token'ı yenile — backend kuralları güncel token'a ihtiyaç duyar
+      if (verified) {
+        await currentUser.getIdToken(true); // force refresh
+      }
+      
       return verified;
     } catch {
       return false;
@@ -287,6 +305,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resendVerificationEmail,
     checkUsernameAvailability,
     refreshUserData,
+    checkEmailVerified,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
