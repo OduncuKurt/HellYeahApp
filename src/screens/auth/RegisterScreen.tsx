@@ -43,7 +43,7 @@ export default function RegisterScreen({ navigation }: Props) {
   const [confirmPasswordError, setConfirmPasswordError] = useState<string>('');
   const [passwordStrength, setPasswordStrength] = useState<'weak' | 'medium' | 'strong' | ''>('');
   const { register, loading, checkUsernameAvailability } = useAuth();
-  const usernameCheckTimeout = useRef<NodeJS.Timeout | null>(null);
+  const usernameCheckTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Email validation
   const validateEmail = (text: string): boolean => {
